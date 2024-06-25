@@ -1,1 +1,1 @@
-%run .\late_exit_automated.py
+python .\late_exit_automated.py
