@@ -27,6 +27,11 @@ def case_tracker():
     #Read Big(Reports) and Small Data(Notice Actions)
     df_big= pd.read_excel(file_paths[sorted(file_paths)[-1]])
     df_small= pd.read_excel(file_paths[sorted(file_paths)[-2]])
+    #Change Data Types
+    df_big['KKM Protokol'] = df_big['KKM Protokol'].astype(str)
+    df_small['KKM Protokol'] = df_small['KKM Protokol'].astype(str)
+    df_big['Ekip No'] = df_big['Ekip No'].astype(str)
+    df_small['Ekip No'] = df_small['Ekip No'].astype(str)
 
     df_big.rename(columns = {'Ekip Kodu' : 'Ekip No'}, inplace = True)
     df_small.rename(columns = {'Ekip Kodu' : 'Ekip No'}, inplace = True)
