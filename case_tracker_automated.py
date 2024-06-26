@@ -21,7 +21,8 @@ def case_tracker():
       if os.path.isfile(item):
         if 'yanlis_kontrolu' not in item:
           if 'manuel_atn' not in item:
-            file_paths[os.path.getsize(item)] = item
+            if 'case_tracker' not in item:
+                file_paths[os.path.getsize(item)] = item
 
     #Read Big(Reports) and Small Data(Notice Actions)
     df_big= pd.read_excel(file_paths[sorted(file_paths)[-1]])
@@ -203,12 +204,12 @@ def case_tracker():
       df_merged[['Ekip No', 'KKM Protokol', 'HARFSIZ ATN','Vaka Veriliş Tarih\Saat', 'Fark']].sort_values(by = ['HARFSIZ ATN', 'Vaka Veriliş Tarih\Saat'], ascending = True).to_excel('manuel_atn.xlsx')
       
       print(">>> Manuel ATN Kontrol Dosyası Oluşturuldu!")
-      print("---------------------------------------------")
+      print("-------------------------------------------")
     except:
       print(">>> Manuel ATN Kontrol Dosyası Oluşturulamadı!")
       print("---------------------------------------------")
       pass
-
+    print("*********** MUHAMMED'DEN SEVGİLERLE! ***********")
     return wrong_inputs
 
   def writer(name,surname):
@@ -225,3 +226,5 @@ def case_tracker():
       return "Whoops!"
 
   return writer("Muhammed", "Kaya")
+
+case_tracker()
