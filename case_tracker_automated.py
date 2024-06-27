@@ -30,11 +30,11 @@ def case_tracker():
     #Change Data Types
     df_big['KKM Protokol'] = df_big['KKM Protokol'].astype(str)
     df_small['KKM Protokol'] = df_small['KKM Protokol'].astype(str)
-    df_big['Ekip No'] = df_big['Ekip No'].astype(str)
-    df_small['Ekip No'] = df_small['Ekip No'].astype(str)
 
     df_big.rename(columns = {'Ekip Kodu' : 'Ekip No'}, inplace = True)
     df_small.rename(columns = {'Ekip Kodu' : 'Ekip No'}, inplace = True)
+    df_big['Ekip No'] = df_big['Ekip No'].astype(str)
+    df_small['Ekip No'] = df_small['Ekip No'].astype(str)
 
     df_merged = pd.merge(df_big, df_small,  on = ['KKM Protokol', 'Ekip No'])
     df_merged.fillna('00',inplace= True)
