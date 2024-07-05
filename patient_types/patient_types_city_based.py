@@ -155,7 +155,7 @@ def patient_types_city_based():
   icds.to_excel(f'{hospital_name} ARREST.xlsx')
 
   merged_df = pd.concat([genders, ages, pulses, triages, call_reasons, spo2s, icds], axis=1)
-  merged_df.to_excel('test_merged.xlsx')
+  merged_df.to_excel(f'{hospital_name} merged.xlsx')
 
   return "Many loves from Muhammed Kaya :*"
 patient_types_city_based()
