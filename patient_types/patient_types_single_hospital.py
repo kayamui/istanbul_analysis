@@ -1,4 +1,4 @@
- def patient_types():
+def patient_types():
 
   import pandas as pd
   import numpy as np
