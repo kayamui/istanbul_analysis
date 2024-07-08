@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, send_file, redirect, url_for
 import pandas as pd
 from io import BytesIO
-import os
 
 app = Flask(__name__)
 
@@ -94,10 +93,10 @@ def upload_file():
             output = BytesIO()
             writer = pd.ExcelWriter(output, engine='xlsxwriter')
             df.to_excel(writer, sheet_name=sheet_name, index=False)
-            writer.save()
+            writer.close()
             output.seek(0)
 
-            return send_file(output, attachment_filename=output_file_name, as_attachment=True)
+            return send_file(output, download_name=output_file_name, as_attachment=True)
 
     return redirect(url_for('index'))
 
