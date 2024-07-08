@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Case Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        label {
+            font-weight: bold;
+        }
+        select, input[type="submit"] {
+            margin-bottom: 10px;
+            padding: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Case Tracker</h2>
+    <form action="/process" method="post" enctype="multipart/form-data">
+        <label for="df_big">Select Big DataFrame:</label>
+        <input type="file" id="df_big" name="df_big"><br>
+        
+        <label for="df_small">Select Small DataFrame:</label>
+        <input type="file" id="df_small" name="df_small"><br>
+        
+        <label for="save_location">Save Location:</label>
+        <input type="text" id="save_location" name="save_location" placeholder="Enter file path"><br>
+        
+        <input type="submit" value="Generate Report">
+    </form>
+</body>
+</html>
