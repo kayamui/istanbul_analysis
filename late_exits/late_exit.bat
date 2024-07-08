@@ -1,1 +1,0 @@
-python .\late_exit_automated.py
