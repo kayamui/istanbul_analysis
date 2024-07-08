@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İlçe Bulucu</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>İlçe Bulucu</h1>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="option">Yapmak İstediğiniz İşlemi Seçin:</label>
+            <select id="option" name="option" onchange="showInstructions()">
+                <option value="">Seçiniz</option>
+                <option value="ilce_bulucu">İlçe Bulucu</option>
+            </select><br><br>
+
+            <div id="instructions" style="display:none;">
+                <p>
+                    1. İşlem yapmak istediğiniz dosyayı "Gözat" ile ekleyiniz.<br>
+                    2. Dosyada işlem yapılacak sayfanın adını büyük küçük harfler, 
+                    noktalamalar... vs. gibi tüm değerleri aynı olacak şekilde giriniz.<br>
+                    3. Kolon adını giriniz.<br>
+                    4. Kaydedilecek dosya adını giriniz.<br>
+                    5. Başla tuşuna basınız.<br>
+                    6. Dosya belirlediğiniz isme kaydedilecektir.
+                </p>
+                <label for="file">Excel Dosyası Seçin:</label>
+                <input type="file" id="file" name="file" accept=".xlsx" required><br><br>
+                
+                <label for="sheet_name">Sayfa Adı:</label>
+                <input type="text" id="sheet_name" name="sheet_name" required><br><br>
+
+                <label for="address_column">Kolon Adı:</label>
+                <input type="text" id="address_column" name="address_column" required><br><br>
+
+                <label for="output_file">Kaydedilecek Dosya Adı:</label>
+                <input type="text" id="output_file" name="output_file" required><br><br>
+
+                <input type="submit" value="Başlat">
+            </div>
+        </form>
+    </div>
+    <script>
+        function showInstructions() {
+            var option = document.getElementById("option").value;
+            if (option === "ilce_bulucu") {
+                document.getElementById("instructions").style.display = "block";
+            } else {
+                document.getElementById("instructions").style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
