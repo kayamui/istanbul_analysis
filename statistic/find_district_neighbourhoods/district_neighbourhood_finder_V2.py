@@ -1,7 +1,7 @@
 def find_district():
   
   """
-  Based on the addresses have been taken, this function creates two columns to write the districts and neighbourhoods
+  Based on the addresses have been taken, this function creates two columns to write the founded districts and neighbourhoods
   
   """
 
