@@ -3,54 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İlçe Bulucu</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <h1>İlçe Bulucu</h1>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <label for="option">Yapmak İstediğiniz İşlemi Seçin:</label>
-            <select id="option" name="option" onchange="showInstructions()">
-                <option value="">Seçiniz</option>
-                <option value="ilce_bulucu">İlçe Bulucu</option>
-            </select><br><br>
-
-            <div id="instructions" style="display:none;">
-                <p>
-                    1. İşlem yapmak istediğiniz dosyayı "Gözat" ile ekleyiniz.<br>
-                    2. Dosyada işlem yapılacak sayfanın adını büyük küçük harfler, 
-                    noktalamalar... vs. gibi tüm değerleri aynı olacak şekilde giriniz.<br>
-                    3. Kolon adını giriniz.<br>
-                    4. Kaydedilecek dosya adını giriniz.<br>
-                    5. Başla tuşuna basınız.<br>
-                    6. Dosya belirlediğiniz isme kaydedilecektir.
-                </p>
-                <label for="file">Excel Dosyası Seçin:</label>
-                <input type="file" id="file" name="file" accept=".xlsx" required><br><br>
-                
-                <label for="sheet_name">Sayfa Adı:</label>
-                <input type="text" id="sheet_name" name="sheet_name" required><br><br>
-
-                <label for="address_column">Kolon Adı:</label>
-                <input type="text" id="address_column" name="address_column" required><br><br>
-
-                <label for="output_file">Kaydedilecek Dosya Adı:</label>
-                <input type="text" id="output_file" name="output_file" required><br><br>
-
-                <input type="submit" value="Başlat">
-            </div>
-        </form>
-    </div>
+    <title>İlçe ve Mahalle Bulucu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        label {
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="file"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+    </style>
     <script>
-        function showInstructions() {
-            var option = document.getElementById("option").value;
-            if (option === "ilce_bulucu") {
-                document.getElementById("instructions").style.display = "block";
+        function toggleCheckboxes() {
+            var action = document.getElementById("action").value;
+            var checkboxes = document.getElementById("checkboxes");
+            if (action === "ilce_mahalle_bulucu") {
+                checkboxes.style.display = "block";
             } else {
-                document.getElementById("instructions").style.display = "none";
+                checkboxes.style.display = "none";
             }
         }
     </script>
+</head>
+<body>
+    <div class="container">
+        <h1>İlçe ve Mahalle Bulucu</h1>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="action">Hangi İşlemi Yapmak İstiyorsunuz?</label>
+            <select id="action" name="action" onchange="toggleCheckboxes()">
+                <option value="">Seçiniz</option>
+                <option value="ilce_mahalle_bulucu">İlçe ve Mahalle Bulucu</option>
+            </select>
+            
+            <label for="file">Dosya Seçin:</label>
+            <input type="file" id="file" name="file" required>
+            
+            <label for="sheet_name">Sayfa Adı:</label>
+            <input type="text" id="sheet_name" name="sheet_name" required>
+            
+            <label for="address_column">Adres Sütunu Adı:</label>
+            <input type="text" id="address_column" name="address_column" required>
+            
+            <label for="output_file">Çıktı Dosya Adı:</label>
+            <input type="text" id="output_file" name="output_file" required>
+
+            <div id="checkboxes" style="display:none;">
+                <label>Hangi Veriyi Ayırmak İstiyorsunuz?</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ilce" name="ilce">
+                    <label for="ilce">İlçe</label>
+                    <input type="checkbox" id="mahalle" name="mahalle">
+                    <label for="mahalle">Mahalle</label>
+                </div>
+            </div>
+            
+            <input type="submit" value="Yükle ve İşle">
+        </form>
+    </div>
 </body>
 </html>
