@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İlçe ve Mahalle Bulucu</title>
+    <title>Otomasyon Sistemi</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -20,6 +20,8 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
         }
         h1 {
             text-align: center;
@@ -33,10 +35,13 @@
             font-weight: bold;
         }
         input[type="text"],
-        input[type="file"] {
+        input[type="file"],
+        select {
             padding: 8px;
             border: 1px solid #ccc;
             border-radius: 4px;
+            width: 100%;
+            box-sizing: border-box;
         }
         input[type="checkbox"] {
             margin-right: 10px;
@@ -48,6 +53,8 @@
             padding: 10px;
             border-radius: 4px;
             cursor: pointer;
+            width: 100%;
+            box-sizing: border-box;
         }
         input[type="submit"]:hover {
             background-color: #0056b3;
@@ -56,40 +63,45 @@
             display: flex;
             align-items: center;
         }
+        .hidden {
+            display: none;
+        }
     </style>
     <script>
-        function toggleCheckboxes() {
+        function toggleFormElements() {
             var action = document.getElementById("action").value;
-            var checkboxes = document.getElementById("checkboxes");
+            var formElements = document.getElementById("form-elements");
             if (action === "ilce_mahalle_bulucu") {
-                checkboxes.style.display = "block";
+                formElements.classList.remove("hidden");
             } else {
-                checkboxes.style.display = "none";
+                formElements.classList.add("hidden");
             }
         }
     </script>
 </head>
 <body>
     <div class="container">
-        <h1>İlçe ve Mahalle Bulucu</h1>
+        <h1>Otomasyon Sistemi</h1>
         <form action="/upload" method="post" enctype="multipart/form-data">
             <label for="action">Hangi İşlemi Yapmak İstiyorsunuz?</label>
-            <select id="action" name="action" onchange="toggleCheckboxes()">
+            <select id="action" name="action" onchange="toggleFormElements()">
                 <option value="">Seçiniz</option>
                 <option value="ilce_mahalle_bulucu">İlçe ve Mahalle Bulucu</option>
             </select>
             
-            <label for="file">Dosya Seçin:</label>
-            <input type="file" id="file" name="file" required>
-            
-            <label for="sheet_name">Sayfa Adı:</label>
-            <input type="text" id="sheet_name" name="sheet_name" required>
-            
-            <label for="address_column">Adres Sütunu Adı:</label>
-            <input type="text" id="address_column" name="address_column" required>
-            
-            <label for="output_file">Çıktı Dosya Adı:</label>
-            <input type="text" id="output_file" name="output_file" required>
+            <div id="form-elements" class="hidden">
+                <label for="file">Dosya Seçin:</label>
+                <input type="file" id="file" name="file" required>
+                
+                <label for="sheet_name">Sayfa Adı:</label>
+                <input type="text" id="sheet_name" name="sheet_name" required>
+                
+                <label for="address_column">Adres Sütunu Adı:</label>
+                <input type="text" id="address_column" name="address_column" required>
+                
+                <label for="output_file">Çıktı Dosya Adı:</label>
+                <input type="text" id="output_file" name="output_file" required>
+            </div>
             
             <input type="submit" value="Yükle ve İşle">
         </form>
