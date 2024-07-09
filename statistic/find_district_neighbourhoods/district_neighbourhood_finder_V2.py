@@ -35,7 +35,7 @@ def find_district():
   # New columns without any unnecessarities
   columns_list= []
   for i in df_temp.columns:
-    i= i.replace('-','').replace('Ç', 'C').replace('Ğ', 'G').replace('İ', 'I').replace('Ö', 'O').replace('Ş', 'S').replace('Ü', 'U').strip()
+    i= i.replace('-',' ').replace('Ç', 'C').replace('Ğ', 'G').replace('İ', 'I').replace('Ö', 'O').replace('Ş', 'S').replace('Ü', 'U').strip()
     columns_list.append(i)
 
   df_temp.columns= columns_list #####################################
@@ -92,3 +92,5 @@ def find_district():
   df_temp.to_excel(f'{file_name}.xlsx')
 
   return "Many loves from Muhammed KAYA!"
+
+find_district()
