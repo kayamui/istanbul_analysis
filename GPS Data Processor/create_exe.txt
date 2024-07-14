@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --hidden-import openpyxl --hidden-import openpyxl.cell._writer gps_data_processor.py
