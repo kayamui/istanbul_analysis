@@ -1,0 +1,17 @@
+    hiddenimports=[
+        'openpyxl',
+        'openpyxl.cell',
+        'openpyxl.cell._writer',
+        'openpyxl.styles',
+        'openpyxl.worksheet',
+        'openpyxl.worksheet._reader',
+        'openpyxl.worksheet._writer',
+        'openpyxl.workbook',
+        'openpyxl.workbook._writer',
+        'openpyxl.drawing',
+        'openpyxl.drawing.spreadsheet_drawing',
+    ],
+
+
+Run this code: 
+pyinstaller --onefile --windowed --hidden-import openpyxl --hidden-import openpyxl.cell._writer district_finder_multithreading.py

@@ -1,29 +1,4 @@
-def find_district():
-  
-  """
-  Based on the addresses have been taken, this function creates two columns to write the founded districts and neighbourhoods
-  
-  """
-
-  import pandas as pd
-  import numpy as np
-  import warnings
-  warnings.filterwarnings('ignore')
-
-  import os
-
-  # import Excel File and select the dataframe
-  file_path= str(input('Please add the file path here: '))
-  excel_file= pd.ExcelFile(file_path)
-
-  dataframes= {sheet_name: excel_file.parse(sheet_name) for sheet_name in excel_file.sheet_names}
-  print(list(dataframes.keys()))
-  sheet_path = str(input(f'Please add the sheet path here: '))
-  df= dataframes[sheet_path]
-
-  # Created a temporary file to not harm the original dataframe
-  df_temp= df.copy()
-
+def find_district(df_temp):
 
   # Make columns uppercase and remove the blanks
   df_temp.columns = [col.strip().upper() for col in df_temp.columns]
