@@ -85,3 +85,27 @@ departments/statistic/find_district_neighbourhoods/Frontend/district_finder.spec
 departments/statistic/find_district_neighbourhoods/Frontend/district_finder_multithreading.py
 departments/statistic/find_district_neighbourhoods/Frontend/district_finder_multithreading.spec
 departments/statistic/find_district_neighbourhoods/Frontend/hidden imports.txt
+departments/inspection/frontend/staff_inspection/build/inspections/EXE-00.toc
+departments/inspection/frontend/staff_inspection/build/inspections/base_library.zip
+departments/inspection/frontend/staff_inspection/build/inspections/Analysis-00.toc
+departments/inspection/frontend/staff_inspection/build/inspections/inspections.pkg
+departments/inspection/frontend/staff_inspection/build/inspections/localpycs/pyimod01_archive.pyc
+departments/inspection/frontend/staff_inspection/build/inspections/localpycs/pyimod02_importers.pyc
+departments/inspection/frontend/staff_inspection/build/inspections/localpycs/pyimod03_ctypes.pyc
+departments/inspection/frontend/staff_inspection/build/inspections/localpycs/pyimod04_pywin32.pyc
+departments/inspection/frontend/staff_inspection/build/inspections/localpycs/struct.pyc
+departments/inspection/frontend/staff_inspection/build/inspections/PKG-00.toc
+departments/inspection/frontend/staff_inspection/build/inspections/PYZ-00.pyz
+departments/inspection/frontend/staff_inspection/build/inspections/PYZ-00.toc
+departments/inspection/frontend/staff_inspection/build/inspections/Tree-00.toc
+departments/inspection/frontend/staff_inspection/build/inspections/Tree-01.toc
+departments/inspection/frontend/staff_inspection/build/inspections/Tree-02.toc
+departments/inspection/frontend/staff_inspection/build/inspections/warn-inspections.txt
+departments/inspection/frontend/staff_inspection/build/inspections/xref-inspections.html
+departments/inspection/frontend/staff_inspection/dist/inspections.exe
+departments/inspection/frontend/staff_inspection/hidden imports.txt
+departments/inspection/frontend/staff_inspection/inspections.spec
+GPS Data Processor/create_exe.txt
+GPS Data Processor/create_exe.txt
+GPS Data Processor/create_exe.txt
+GPS Data Processor/create_exe.txt
