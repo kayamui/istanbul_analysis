@@ -285,6 +285,7 @@ class AmbulanceApp:
 
         day_of_week= ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA', 'CUMARTESİ', 'PAZAR']
         df['Gün'] = pd.Categorical(df['Gün'], categories=day_of_week, ordered=True)
+        df['week_day']= df['Gün'].apply(lambda x: 'HAFTA İÇİ' if x in ['PAZARTESİ', 'SALI', 'ÇARŞAMBA', 'PERŞEMBE', 'CUMA'] else 'HAFTA SONU')
 
         df['Value']= 1
         df['Value']= df['Value'].astype(int)
@@ -377,6 +378,33 @@ def generate_graphs_for_all_days(df, save_path):
                     visualize_map(selected_df, day, most_common_month, year, save_path)
                 else:
                     print(f"Herhangi bir veri mevcut değil: {day}, {most_common_month}. Ay")
+
+    
+    # GENERATING GRAPHS FOR WEEKDAY AND WEEKEND
+    week_day = ["HAFTA İÇİ", "HAFTA SONU"]
+    for month in df['Ay'].unique():
+        filtered_df = df[df['Ay'] == month]  # Filter the DataFrame for the current month
+        most_common_month = month
+        if not filtered_df.empty:
+            for day in week_day:
+                selected_df = filtered_df[filtered_df['week_day'] == day]
+
+                if not selected_df.empty:
+                    visualize_map(selected_df, day, most_common_month, year, save_path)
+                else:
+                    print(f"Herhangi bir veri mevcut değil: {day}, {most_common_month}. Ay")
+
+    # GENERATING GRAPHS FOR OVERALL
+    for month in df['Ay'].unique():
+        filtered_df = df[df['Ay'] == month]  # Filter the DataFrame for the current month
+        most_common_month = month
+        day= 'Genel'
+        if not filtered_df.empty:
+            selected_df= filtered_df.copy()
+            visualize_map(selected_df, day, most_common_month, year, save_path)
+        else:
+            print(f"Herhangi bir veri mevcut değil: {day}, {most_common_month}. Ay")
+
 
 def visualize_map(df, day, most_common_month, year, save_path):
     """Visualizes and saves the map for the provided DataFrame, day, month, and year."""
