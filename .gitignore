@@ -183,3 +183,6 @@ departments/Electronic Data System/Gui Program/versions/ver1.2/Genel Vaka Araşt
 departments/Electronic Data System/Gui Program/versions/ver1.3/hbys_gui.py
 departments/Electronic Data System/Gui Program/versions/ver1.4/hbys_gui.py
 departments/Electronic Data System/Gui Program/versions/ver1.4/unlock_code.py
+*.xlsx
+*.xls
+*.gif
