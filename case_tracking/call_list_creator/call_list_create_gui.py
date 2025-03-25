@@ -448,7 +448,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("app_icon.ico")#C:/Users/mkaya/Documents/Github/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("app_icon.ico")
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially
