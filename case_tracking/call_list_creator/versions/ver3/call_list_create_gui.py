@@ -214,21 +214,22 @@ class App:
     def run_main_program(self):
         """Generate HBYS reports."""
 
-        messagebox.showinfo('Dosyaları Bulundur', 'İhbar İşlemleri, Personel Nöbet Listesi,eu_team_code')
-        
-        current_dir =os.path.abspath(os.getcwd())  #os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
+        messagebox.showinfo('Dosyaları Yükle', 'İhbar İşlemleri, Personel Nöbet Listesi,eu_team_code')
+
+        current_dir =os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
 
         shift_list_file= [x for x in os.listdir(current_dir) if 'Personel-Nöbet-Listesi' in x]
-        
+        keyword_team_code_file= [y for y in os.listdir(current_dir) if 'eu_team_code' in y]
         cases_file= [t for t in os.listdir(current_dir) if 'İhbar işlemleri' in t]
 
-
         if not shift_list_file:
-            messagebox.showerror("Hata", "Personel Nöbet Listesi dosyasını yükleyin!")
+            messagebox.showerror("Hata", "Personel Nöbet Listesini 'Personel-Nöbet-Listesi' olarak adlandırın!")
             sys.exit()
-
+        if not keyword_team_code_file:
+            messagebox.showerror("Hata", "Ekip isim listesini 'eu_team_code' olarak adlandırın!")
+            sys.exit()
         if not cases_file:
-            messagebox.showerror("Hata", "İhbar işlemleri dosyasını yükleyin!")
+            messagebox.showerror("Hata", "İhbar işlemeri dosyasını 'İhbar işlemleri' olarak adlandırın!")
             sys.exit()
 
         now = str(dt.datetime.now().date())
@@ -240,66 +241,15 @@ class App:
         # Use os.path.exists() to check if directory exists
         if not os.path.exists(directory_name):
             os.makedirs(current_dir + '\\' + directory_name)
+            messagebox.showinfo(f'Directory',f'{directory_name} klasörü oluşturuldu.')
         else:
             pass
 
 
-        shift_list= pd.read_excel(os.path.join(current_dir, shift_list_file[0])) #pd.read_excel(os.path.join(current_dir, shift_list_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/Personel-Nöbet-Listesi (15).xls')
-        #pd.read_excel(os.path.join(current_dir, keyword_team_code_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/eu_team_code.xlsx')
-        #keyword_team_dict=dict(zip(keyword_team_code['112ONLINE'].astype(str).str.strip(), keyword_team_code['ASOS'].astype(str).str.strip()))
-        df_cases= pd.read_excel(os.path.join(current_dir, cases_file[0])) #pd.read_excel(os.path.join(current_dir, cases_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/İhbar işlemleri (81).xls')
-
-        def team_code_update():
-            team_code_update_file = [u for u in os.listdir(current_dir) if 'İmza Atan Personel' in u]
-            keyword_team_code_file= [y for y in os.listdir(current_dir) if 'eu_team_code' in y]
-
-            if team_code_update_file:
-                # Read the new team code update file
-                team_code_update_df = pd.read_excel(os.path.join(current_dir, team_code_update_file[0]))
-                team_code_update_df= team_code_update_df[['Ekip Adı', 'Ekip Kodu']]
-                
-                # Create the updated dictionary
-                updated_dict = dict(
-                    zip(
-                        team_code_update_df['Ekip Adı'].astype(str).str.strip(),
-                        team_code_update_df['Ekip Kodu'].astype(str).str.strip()
-                    )
-                )
-
-                # Avoid duplicates with the same key-value pairs
-                cleaned_dict = {}
-                for k, v in updated_dict.items():
-                    if k not in cleaned_dict or cleaned_dict[k] != v:
-                        cleaned_dict[k] = v
-
-                # Save the updated file with new column names
-                team_code_update_df.rename(columns={'Ekip Kodu': 'ASOS', 'Ekip Adı': '112ONLINE'}, inplace=True)
-                team_code_update_df.to_excel(current_dir + 'eu_team_code.xlsx', index=False)
-
-                messagebox.showinfo('Güncelleme', 'Ekip Kodları Güncellendi!')
-                return cleaned_dict
-            else:
-                if keyword_team_code_file:
-                    keyword_team_code= pd.read_excel(os.path.join(current_dir, keyword_team_code_file[0]))
-
-                    # Fallback to original keyword_team_code
-                    fallback_dict = dict(
-                        zip(
-                            keyword_team_code['112ONLINE'].astype(str).str.strip(),
-                            keyword_team_code['ASOS'].astype(str).str.strip()
-                        )
-                    )
-
-                    return fallback_dict
-                else:
-                    messagebox.showerror("Hata", "İmza Atan Personel Raporu dosyasını yükleyin!")
-                    sys.exit()
-
-            messagebox.showerror("Hata", "İmza Atan Personel Raporu dosyasını yükleyin!")
-            sys.exit()
-            
-        keyword_team_dict= team_code_update()
-        
+        shift_list= pd.read_excel(os.path.join(current_dir, shift_list_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/Personel-Nöbet-Listesi (15).xls')
+        keyword_team_code= pd.read_excel(os.path.join(current_dir, keyword_team_code_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/eu_team_code.xlsx')
+        keyword_team_dict=dict(zip(keyword_team_code['112ONLINE'].astype(str).str.strip(), keyword_team_code['ASOS'].astype(str).str.strip()))
+        df_cases= pd.read_excel(os.path.join(current_dir, cases_file[0])) #pd.read_excel('C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/İhbar işlemleri (81).xls')
 
         def get_team_code_match(row):
             try:
@@ -337,43 +287,36 @@ class App:
             shift_list['Ekip No']= shift_list['Ekip No'].astype(str).str.strip()
 
             shift_list['Ekip No']= shift_list['Ekip No'].astype(str).str.strip().apply(get_team_code_match)
-            shift_list= shift_list[shift_list['Görev'].isin(['Ekip Sorumlusu','Yardımcı Sağlık Personeli','Sürücü'])]
-            sort_list= ['Ekip Sorumlusu','Yardımcı Sağlık Personeli','Sürücü']
-            shift_list['Görev']= pd.Categorical(shift_list['Görev'], categories=sort_list, ordered=True)
+            shift_list= shift_list[shift_list['Görev'].isin(['Ekip Sorumlusu','Yardımcı Sağlık Personeli'])]
             shift_list['İsim Soyisim'] = shift_list['İsim'] + ' ' + shift_list['Soyisim']
             shift_list.drop(columns=['İsim', 'Soyisim'], inplace=True)
-            shift_list['İsim Soyisim']= shift_list['İsim Soyisim'] + ' - ' + shift_list['Görev'].astype(str)
-            #shift_list.drop(columns=['Görev'], inplace=True)
-
-            shift_list['İsim Soyisim']= shift_list['İsim Soyisim'] + ' - ' +shift_list['Telefon'] 
-            shift_list.drop(columns=['Telefon'], inplace=True)
 
             shift_list= shift_list[shift_list['Ekip No'] != 'row']
+            shift_list.insert(1, 'İsim Soyisim',shift_list.pop('İsim Soyisim'))
             shift_list.insert(1, 'İsim Soyisim',shift_list.pop('İsim Soyisim'))
 
             shift_list.reset_index(drop=True, inplace=True)
 
             return shift_list
-
+        
         shift_list= shift_list_cleaning(shift_list)
 
         def call_filter(df_cases, keyword_team_dict):
             #Left only necessary columns
-
-            df_cases.drop(columns = ['KKM Seri No', 'Adres', 'Vaka Yeri Açıklaması'], inplace = True)
             df_cases.rename(columns={'Ekip Kodu': 'Ekip No'}, inplace=True)
-
             df_cases['Ekip No']= df_cases['Ekip No'].astype(str).str.strip()
             df_cases= df_cases[df_cases['Ekip No'].isin(keyword_team_dict.values())]
+            df_cases['Ekipteki Kişiler']= pd.NA
             
             df_cases['KKM Protokol']= df_cases['KKM Protokol'].astype(int)
+            df_cases['Ekipteki Kişiler'] = pd.NA
 
-            df_cases['Tarih']= pd.to_datetime(df_cases['Tarih'], format='%d-%m-%Y %H:%M')
-            df_cases = df_cases[['KKM Protokol', 'Ekip No', 'Tarih', 'Durum']]       
+            df_cases.drop(columns = ['KKM Seri No', 'Adres', 'Vaka Yeri Açıklaması'], inplace = True)
+            
 
             return df_cases
         
-        merged_df= call_filter(df_cases, keyword_team_dict)  
+        merged_df= call_filter(df_cases, keyword_team_dict)    
 
         def filter_data(merged_df):
             option = messagebox.askquestion(
@@ -381,7 +324,6 @@ class App:
                 "Tek bir nöbet gününü mü çıkarmak istiyorsunuz?"
                 )
             if option == 'yes':
-                filtered_df= pd.DataFrame()
                 try:
                     year = int(simpledialog.askstring("Input", "Yıl:", parent=root))
                     month = int(simpledialog.askstring("Input", "Ay:", parent=root))
@@ -391,8 +333,9 @@ class App:
                     start_date = dt.datetime(year, month, day, hour)
                     end_date = start_date + dt.timedelta(days=1)
 
-                    filtered_df = pd.concat([filtered_df, merged_df[(merged_df['Tarih'] >= start_date) & (merged_df['Tarih'] < end_date)]], ignore_index=True)
-
+                    filtered_df = merged_df[
+                        (merged_df['Tarih'] >= start_date) & (merged_df['Tarih'] < end_date)
+                    ]
                     for i in range(1, 9):
                         try:
                             start_date += dt.timedelta(days=4)
@@ -402,17 +345,19 @@ class App:
                                 (merged_df['Tarih'] >= start_date) & (merged_df['Tarih'] < end_date)
                             ]
                             filtered_df = pd.concat([filtered_df, temp_df], ignore_index=True)
-                        except Exception as e:
-                            messagebox.showerror("Error", "Invalid input: {e}")
-                            return None
-
-                    return filtered_df
+                        except:
+                            pass
                 except Exception as e:
                     messagebox.showerror("Error", f"Invalid input: {e}")
                     return None
             else:
                 return merged_df
+            
+            merged_df = merged_df[['KKM Protokol', 'Ekip No', 'Tarih', 'Durum','Ekipteki Kişiler']]
 
+            merged_df['Tarih']= pd.to_datetime(merged_df['Tarih'], format='%d-%m-%Y %H:%M')
+
+            return merged_df
         
         df_unmatched= filter_data(merged_df)
         
@@ -424,25 +369,14 @@ class App:
             unmatch_merged['Tarih']= pd.to_datetime(unmatch_merged['Tarih'], format='%d-%m-%Y %H:%M')
             unmatch_merged['is_date_between']= unmatch_merged.apply(lambda x: x['Başlangıç Tarihi'] <= x['Tarih'] <= x['Bitiş Tarihi'], axis=1)
             unmatch_merged= unmatch_merged[unmatch_merged['is_date_between']==True]
-            unmatch_merged.sort_values(by='Görev', inplace=True)
-            unmatch_merged= unmatch_merged.groupby(['KKM Protokol', 'Ekip No', 'Tarih', 'Durum']).agg({'İsim Soyisim':','.join}).reset_index()
+            unmatch_merged= unmatch_merged.groupby(['KKM Protokol', 'Ekip No', 'Tarih', 'Durum']).agg({'İsim Soyisim':','.join, 'Telefon':','.join}).reset_index()
             unmatch_merged['KKM Protokol']= unmatch_merged['KKM Protokol'].astype(int)
-
-            unmatch_merged['İsim Soyisim']= unmatch_merged['İsim Soyisim'].str.split(',')
-            names_split= unmatch_merged['İsim Soyisim'].apply(pd.Series)
-            name= 'isim'
-            names_split.columns= [f'{name}{i+1}' for i in range(names_split.shape[1])]
-            unmatch_merged= pd.concat([unmatch_merged, names_split], axis=1)
-            unmatch_merged.drop(columns=['İsim Soyisim'], inplace=True)
-            unmatch_merged.sort_values(by='isim1', ascending=True,inplace=True)
-            unmatch_merged.reset_index(drop=True, inplace=True)
-            
 
             return unmatch_merged
         
         df= match_call_list(df_unmatched,shift_list)
         df.to_excel(directory_path + f'{now} Arama Listesi.xlsx')
-        success_message= messagebox.showinfo('Kayıt', 'Arama Listesi Oluşturuldu!')
+        success_message= messagebox.showinfo('Kayıt', 'Çağrı Listesi Oluşturuldu!')
         return success_message
         
 
@@ -458,7 +392,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("app_icon.ico")#C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially
