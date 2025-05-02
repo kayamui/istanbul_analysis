@@ -1,6 +1,5 @@
 # SECONDARY TRANSPORTS STATISTICS
 import pandas as pd
-import warnings
 import os
 import datetime as dt
 import ctypes
@@ -8,11 +7,11 @@ import ctypes
 import tkinter as tk
 from tkinter import filedialog, messagebox, Listbox, simpledialog
 from tkinter import ttk
+
 import threading
+
 import pandas as pd
 import numpy as np
-import plotly.express as px
-from sklearn.preprocessing import MinMaxScaler
 import shutil
 import hashlib  # To handle unlock code generation via hashing
 from tkinter import messagebox  # To display error/info dialogs in the GUI
@@ -22,10 +21,10 @@ import subprocess
 import time
 import atexit
 import winreg
+import openpyxl
+from openpyxl.styles import PatternFill
 
-warnings.filterwarnings('ignore')
-
-warnings.filterwarnings('ignore')
+import queue
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -229,22 +228,22 @@ class AmbulanceApp:
         self.splash_screen.configure(bg='#f0f4f7')  # Light background color
 
         # Centered title "Vaka Yoğunluk Grafikeri"
-        self.title_label = tk.Label(self.splash_screen, text="İstanbul 112 Mükerrer Nakil Çalışması", font=("Helvetica", 24, "bold"), fg="#333", bg="#f0f4f7")
+        self.title_label = tk.Label(self.splash_screen, text="Mükerrer Nakil Çalışması", font=("Helvetica", 24, "bold"), fg="#333", bg="#f0f4f7")
         self.title_label.pack(pady=80)
 
         # Dedication message fitted above the bottom text
         self.dedication_message = (
-            "İSTANBUL 112 AMBULANS SERVİSİ - Muhammed KAYA"
+            "İstanbul İl Ambulans Servisi"
         )
         self.dedication_label = tk.Label(self.splash_screen, text=self.dedication_message, font=("Helvetica", 10, "italic"), fg="#555", bg="#f0f4f7", wraplength=750, justify="center")
         self.dedication_label.pack(side="bottom", pady=(0, 40))  # Add padding to prevent overlap with bottom texts
 
         # Bottom left: "Avrupa 112" in minimal and light font
-        self.left_label = tk.Label(self.splash_screen, text="İstanbul 112", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
+        self.left_label = tk.Label(self.splash_screen, text="Muhammed KAYA", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
         self.left_label.place(x=20, y=360)
 
         # Bottom right: "Muhammed Kaya" in a bolder font
-        self.right_label = tk.Label(self.splash_screen, text="Muhammed Kaya", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
+        self.right_label = tk.Label(self.splash_screen, text="Avrupa 112", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
         self.right_label.place(x=650, y=360)
 
         # Destroy the splash screen after 5 seconds
@@ -496,6 +495,16 @@ class AmbulanceApp:
             self.generate_graphs_button.config(state=tk.NORMAL)
 
 
+    def ask_string_main_thread(self, prompt_text):
+        q = queue.Queue()
+
+        def ask():
+            result = simpledialog.askstring("Input", prompt_text, parent=self.root)
+            q.put(result)
+
+        self.root.after(0, ask)
+        return q.get()  # Blocks the thread until input is given
+
     def generate_graphs(self):
         """Generate graphs for the loaded data with progress tracking and error handling."""
         if not self.save_path:
@@ -568,6 +577,35 @@ class AmbulanceApp:
                     df_reports.reset_index(inplace=True)
                     df_placed.reset_index(inplace=True)
 
+                    df_reports.rename(columns= {'ICD10 TANI\nADI':'ICD10 TANI ADI'}, inplace=True)
+                    reports_columns= ['İhbar/Çağrı Tarihi', 'İhbar/Çağrı  Saati', 'Hasta Adı', 'Hasta Soyadı', 'Vaka Veriliş\nTarihi','Vaka Veriliş\nSaati','MANUEL DÜZENLEME Nakledilen Hastane',  'ICD10 TANI KODU', 'ICD10 TANI ADI']
+                    placed_columns= ['Hasta Ad', 'Hasta Soyad','Talep Tarihi','Düzenlenmiş Nakil Talep Eden Hastane', 'Yer Bulunma Tarihi']
+                    
+                    reports_missing_columns= [col for col in reports_columns if col not in df_reports.columns]
+                    placed_missing_columns= [col for col in placed_columns if col not in df_placed.columns]
+                    
+                    non_existent_cols= []
+                    for col in reports_missing_columns:
+                        prompt_text = f"Sahadan Hastaneye Defter'de bulunamayan kolon: {col}, \nŞu an defterde mevcut olan kolon adı giriniz, kolon artık mevcut değilse boş bırakınız: "
+                        new_col = str(self.ask_string_main_thread(prompt_text))
+
+                        if not new_col:
+                            reports_columns.remove(col)
+                            non_existent_cols.append(col)
+                            continue
+
+                        df_reports.rename(columns={new_col:col}, inplace=True)
+
+                    for col in placed_missing_columns:
+                        prompt_text = f"Nakil Defterde Bulunamayan Kolon: {col},\nŞu an defterde mevcut olan kolon adı giriniz, kolon artık mevcut değilse boş bırakınız:"
+                        new_col = str(self.ask_string_main_thread(prompt_text))
+                        if not new_col:
+                            placed_columns.remove(col)
+                            non_existent_cols.append(col)
+                            continue
+
+                        df_placed.rename(columns={new_col:col}, inplace=True)
+
                     placed_baby_index= df_placed[df_placed['Hasta Ad'].astype(str).str.lower().astype(str).str.contains('bebek')].index
                     df_placed.loc[placed_baby_index, 'is_baby']= True
 
@@ -585,11 +623,10 @@ class AmbulanceApp:
                     df_reports.loc[df_reports['is_baby']==True, 'Hasta Adı_upper']= 'BEBEK'
                     df_placed.loc[df_placed['is_baby']==True, 'Hasta Ad_upper']= 'BEBEK'
 
-                    df_placed['Hasta Ad_upper']= df_placed['Hasta Ad_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.strip()
-                    df_reports['Hasta Adı_upper']= df_reports['Hasta Adı_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.strip()
+                    df_placed['Hasta Ad_upper']= df_placed['Hasta Ad_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.replace('2', '').astype(str).str.strip()
+                    df_reports['Hasta Adı_upper']= df_reports['Hasta Adı_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.replace('2', '').astype(str).str.strip()
                     df_placed['Hasta Soyad_upper']= df_placed['Hasta Soyad_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.strip()
                     df_reports['Hasta Soyadı_upper']= df_reports['Hasta Soyadı_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.strip()
-
                     df_placed.rename(columns= {'Hasta Ad_upper':'Hasta Adı_upper', 'Hasta Soyad_upper':'Hasta Soyadı_upper'}, inplace= True)
 
                     df_reports['Nakledilen-Nakil Talep Eden Hastane']= df_reports['MANUEL DÜZENLEME Nakledilen Hastane']
@@ -689,43 +726,34 @@ class AmbulanceApp:
 
                     the_frame.reset_index(drop=True, inplace=True)
 
+                    df_placed.drop(columns=['index','Hasta Adı_upper','Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane', 'Tarih'], inplace=True)
+
                     columns= ['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati', 'Hasta Adı Hasta Soyadı',
-                        'MANUEL DÜZENLEME Nakledilen Hastane', 'ICD10 TANI KODU',
-                        'ICD10 TANI\nADI', 'Talep Tarihi', 'Oluşturma', 'Tarihi', 'Şef Tarihi',
-                        'Şef Günleri', 'Bekleme Süresi', 'Nakil Tipi', 'Talep Kaynağı',
-                        'Vaka Sorumlusu', 'Konsültan Hekim', 'İl', 'İlçe',
-                        'Nakil Talep Eden Başkanlık', 'Nakil Talep Eden Hastane',
-                        'Düzenlenmiş Nakil Talep Eden Hastane', 'Bulunduğu Klinik',
-                        'Hasta Uyruk', 'Hasta T.C. Kimlik No', 'Hastanın Güvencesi', 'Hasta Ad',
-                        'Hasta Soyad', 'Cinsiyet', 'Yaş', 'Sevk Eden Doktor', 'Sevke Esas Tanı',
-                        'Sevke Esas Tanı Kodu', 'Solunum Durumu', 'Solunum İşlemi',
-                        'Sevk Nedeni', 'Nakledilmesi İstenen Klinik', 'Durum', 'Nakil Durumu',
-                        'Kabul Eden Hastane Başkanlık', 'Kabul Eden Hastane',
-                        'Düzenlenmş Kabul Eden Hastane', 'Kabul Eden Klinik',
-                        'Düzenlenmiş Kabul Eden Klinik', 'Kabul Eden Dr.', 'Iptal Nedeni',
-                        'İptal Eden', 'Taşıyan Ekip / Veriliş Saati', 'Ekip Türü',
-                        'Covid-19 Durumu', 'Düzenlenmiş Covid-19 Durumu',
-                        'ASKOM Kararı ile Yerleştirildi', 'Epikriz Muayene Bulguları)',
-                        'KKM Açıklaması', 'Ekip Talep Durumu', 'Ekip Öncelik Durumu',
-                        'Yer Aramaya Başlama Tarihi', 'Yer Bulunma Tarihi', 'Ekip Talep Tarihi',
-                        'Ekip Belirlenme Tarihi', 'Vakanın Ekibe Veriliş Tarihi', 'is_baby',
-                        'workbook']
+                            'MANUEL DÜZENLEME Nakledilen Hastane', 'ICD10 TANI KODU',
+                            'ICD10 TANI ADI'] + list(df_placed.columns[1:])
+                    
+                    for col in non_existent_cols:
+                        try:
+                            columns.remove(col)
+                        except:
+                            pass
 
                     the_frame.rename(columns={'Hasta Ad Soyad':'Hasta Adı Hasta Soyadı'}, inplace=True)
 
                     the_frame= the_frame[columns]
 
                     home = the_frame[the_frame['Sevk Nedeni']=='EVE NAKİL'].index
-                    home_transports= []
-                    for i in home:
-                        home_transports.append(i-1)
-                        home_transports.append(i)
+                    if not home.empty:
+                        home_transports= []
+                        for i in home:
+                            home_transports.append(i-1)
+                            home_transports.append(i)
 
-                    df_home_transports= the_frame.iloc[home_transports]
+                        df_home_transports= the_frame.iloc[home_transports]
+                    else:
+                        df_home_transports= pd.DataFrame()
+
                     the_frame.drop(home_transports, inplace=True)
-
-                    import openpyxl
-                    from openpyxl.styles import PatternFill
 
                     # prompt: if Talep Tarihi column notna, color row to the red
 
@@ -746,8 +774,8 @@ class AmbulanceApp:
                     styled_the_frame= color_rows_by_talep_tarihi(the_frame)
 
                     with pd.ExcelWriter(self.save_path + '/'+ 'Nakil Defteri Mükerrer Çalışması.xlsx', engine='openpyxl') as writer:
-                        styled_the_frame.to_excel(writer, sheet_name='mükerrer')
-                        styled_df_home_transports.to_excel(writer, sheet_name='eve nakil')
+                        styled_the_frame.to_excel(writer, sheet_name='mükerrer', index=False)
+                        styled_df_home_transports.to_excel(writer, sheet_name='eve nakil', index=False)
 
 
                     self.status_label.config(text="Mükerrer Nakil Dosyası Oluşturuluyor...")
@@ -780,7 +808,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially
