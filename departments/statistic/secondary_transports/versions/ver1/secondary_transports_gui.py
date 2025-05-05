@@ -720,7 +720,7 @@ class AmbulanceApp:
 
 
                     the_frame.rename(columns={'Hasta Adı_upper':'Hasta Adı', 'Hasta Soyadı_upper':'Hasta Soyadı', 'Hasta Ad Soyad_upper':'Hasta Ad Soyad'}, inplace=True)
-                    the_frame.insert(2,'Hasta Adı Hasta Soyadı', the_frame.pop('Hasta Ad Soyad'))
+                    the_frame.insert(2,'Hasta Ad Soyad', the_frame.pop('Hasta Ad Soyad'))
 
                     the_frame.drop(columns='index', inplace=True)
 
@@ -738,11 +738,9 @@ class AmbulanceApp:
                         except:
                             pass
 
+                    the_frame.rename(columns={'Hasta Ad Soyad':'Hasta Adı Hasta Soyadı'}, inplace=True)
+
                     the_frame= the_frame[columns]
-                    try:
-                        the_frame['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati'].fillna(the_frame['Tarih'], inplace=True)
-                    except:
-                        pass
 
                     home = the_frame[the_frame['Sevk Nedeni']=='EVE NAKİL'].index
                     if not home.empty:
