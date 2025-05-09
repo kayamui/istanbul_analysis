@@ -1,130 +1,112 @@
-# Istanbul Analysis
 
-## Overview
+# 📊 Istanbul Emergency Medical Services Analysis
 
-This repository contains a collection of Python scripts and Jupyter notebooks for analyzing emergency medical response data in Istanbul. It includes tools for tracking ambulance movements, analyzing response times, visualizing case distributions, and automating various data-related processes.
+**Author:** Muhammed Kaya  
+**Team:** KodlaYaşat (Istanbul 112 Paramedic Developers)
 
-## Table of Contents
+---
 
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Detailed File Descriptions](#detailed-file-descriptions)
-- [Contributing](#contributing)
-- [License](#license)
+## 🔍 Overview
 
-## Project Structure
+This project is a comprehensive analytical toolkit designed to evaluate and optimize the performance of Istanbul's Emergency Medical Services (EMS). It includes a wide range of Python tools and Jupyter notebooks that analyze transport efficiency, GPS reactions, shift patterns, and case tracking — tailored specifically for the Istanbul 112 Ambulance Service.
+
+---
+
+## 📁 Project Structure
 
 ```
-istanbul_analysis-main/
-│── GPS Data Processor/
-│   └── GPS_based_reactions/gps_reactions.py
-│── ambulance_troubles/
-│   └── monthly_district_reach_times/monthly_district_reach_times.py
-│── case_tracking/
-│   ├── case_tracker/case_tracker_automated.py
-│   ├── daily_hourly_case_counts/hourly_case_counts.py
-│   ├── daily_hourly_case_counts/hourly_case_counts_2.py
-│   ├── sea_cases_drowns/sea_cases.py
-│── champions_league/
-│   ├── visualize_champions.py
-│── data_visualisation/
-│   ├── hourly_case_intensity.py
-│── departments/
-│   ├── Electronic Data System/hbys_analiz.py
-│   ├── Electronic Data System/Gui Program/hbys_gui.py
-│   ├── Electronic Data System/Gui Program/hbys_gui.pyw
-│── google_sheets_scripts/
-│   └── convert_multiple_excel_files_into_google_sheets/
-│── late_exits/
-│── patient_types/
-│── staff_troubles/
-│── ambulance_working_distances.ipynb
-│── extra_shift_analysis.ipynb
-│── tensorflow_workout.ipynb
-│── .gitignore
-│── README.md (not present)
+istanbul_analysis/
+│
+├── ambulance_working_distances.ipynb          # Ambulance coverage and distance calculations
+├── asia_transport_chief_analysis.ipynb        # Shift and staff analytics for Asia region
+├── extra_shift_analysis.ipynb                 # Evaluation of additional shift workloads
+├── tensorflow_workout.ipynb                   # Experimentation with ML models
+├── statistics_secondary_transports_original_file_workout.ipynb  # Second transport stat analysis
+│
+├── GPS Data Processor/
+│   └── gps_reactions.py                       # Reaction time analysis based on GPS data
+│
+├── ambulance_troubles/
+│   └── monthly_district_reach_times.py        # Average ambulance reach time per district
+│
+├── case_tracking/
+│   └── call_list_creator/
+│       ├── call_list_create_gui.py            # GUI for manual call list generation
+│       ├── call_list_creator.py               # Logic for generating call lists
+│       └── unlock_code.py                     # Unlocking mechanism for GUI access
+│
+├── .gitignore
+└── README.md
 ```
 
-## Installation
+---
 
-To use this repository, follow these steps:
+## 🔧 Features
 
-1. Clone the repository:
+- 📍 **Geospatial Reach Analysis**  
+  Analyze ambulance reach times per district using GIS and time metrics.
+
+- 🧮 **Shift Workload Insights**  
+  Monitor and assess additional shifts and staff activity.
+
+- 🚑 **Call & Case Tracking Tools**  
+  GUI-driven modules for building and exporting call lists.
+
+- 🛰️ **GPS Reaction Analysis**  
+  Evaluate real-time ambulance deployment speed using GPS logs.
+
+- 🤖 **AI/ML Module (Experimental)**  
+  Early-stage TensorFlow experiments to forecast EMS performance.
+
+---
+
+## 🛠️ Requirements
+
+- Python 3.8+
+- pandas, geopandas, folium, matplotlib
+- tkinter (for GUI tools)
+- Jupyter Notebook (for .ipynb files)
+- XlsxWriter (for Excel export functionality)
+
+Install with:
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🚀 How to Use
+
+1. Clone the repo:
    ```bash
    git clone https://github.com/kayamui/istanbul_analysis.git
    ```
-2. Navigate into the project folder:
+
+2. Navigate into a notebook or Python module:
    ```bash
-   cd istanbul_analysis-main
+   cd istanbul_analysis
    ```
-3. Install dependencies (if applicable):
+
+3. Run notebooks for analysis or use GUI scripts via:
    ```bash
-   pip install -r requirements.txt
+   python case_tracking/call_list_creator/call_list_create_gui.py
    ```
-   *Ensure that a ******`requirements.txt`****** file exists in the repository listing required Python libraries.*
 
-## Usage
+---
 
-Each script serves a specific purpose, from analyzing ambulance response times to visualizing case distributions. To run a script, use:
+## 📌 Use Case
 
-```bash
-python script_name.py
-```
+This project is used by Istanbul's European Side Ambulance Service and UMKE (National Medical Rescue Team) to:
 
-Replace `script_name.py` with the actual file you wish to execute.
+- Improve emergency response time
+- Track ambulance effectiveness by region
+- Plan efficient staffing and transport
+- Enable offline call tracking during disasters
 
-For Jupyter notebooks, launch Jupyter and open the `.ipynb` file:
+---
 
-```bash
-jupyter notebook
-```
+## 👨‍⚕️ Built By
 
-## Detailed File Descriptions
-
-### **1. GPS Data Processor**
-
-- **`gps_reactions.py`**: Processes ambulance GPS data to analyze reactions and movements.
-
-### **2. Ambulance Troubles**
-
-- **`monthly_district_reach_times.py`**: Evaluates ambulance reach times in different districts monthly.
-
-### **3. Case Tracking**
-
-- **`case_tracker_automated.py`**: Automates emergency case tracking.
-- **`hourly_case_counts.py / hourly_case_counts_2.py`**: Analyzes and reports hourly emergency case counts.
-- **`sea_cases.py`**: Investigates water-related emergencies, such as drowning cases.
-
-### **4. Champions League**
-
-- **`visualize_champions.py`**: Visualizes high-performing ambulance crews and response teams.
-
-### **5. Data Visualization**
-
-- **`hourly_case_intensity.py`**: Creates visualizations for emergency case intensity per hour.
-
-### **6. Departments - Electronic Data System**
-
-- **`hbys_analiz.py`**: Analyzes hospital-based information systems.
-- **`hbys_gui.py / hbys_gui.pyw`**: GUI applications for interacting with hospital information systems.
-
-### **7. Other Notable Files**
-
-- **`ambulance_working_distances.ipynb`**: Investigates ambulance travel distances.
-- **`extra_shift_analysis.ipynb`**: Analyzes extra work shifts among emergency personnel.
-
-## Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature_branch`).
-3. Commit changes (`git commit -m "Description"`).
-4. Push to the branch (`git push origin feature_branch`).
-5. Open a pull request for review.
-
-## License
-
-This project is licensed under the MIT License.
-
+A dedicated team of paramedics and data engineers on a mission to **code to save lives.**  
+**Group Name:** KodlaYaşat  
+**Focus:** Innovation in Emergency Services (112 EMS, UMKE)
