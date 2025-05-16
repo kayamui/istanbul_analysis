@@ -744,8 +744,10 @@ class AmbulanceApp:
                     the_frame['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati'].fillna(the_frame['Talep Tarihi'], inplace=True)
                     the_frame['MANUEL DÜZENLEME Nakledilen Hastane'].fillna(method='ffill', inplace=True)
 
+                    the_frame.drop_duplicates(keep='first',inplace=True)
+                    the_frame.reset_index(drop=True, inplace=True)
 
-                    home = the_frame[the_frame['Sevk Nedeni']=='EVE NAKİL'].index
+                    home = the_frame[the_frame['Düzenlenmiş Kabul Eden Klinik']=='EVE NAKİL'].index
                     if not home.empty:
                         home_transports= []
                         for i in home:
@@ -758,19 +760,17 @@ class AmbulanceApp:
 
                     the_frame.drop(home_transports, inplace=True)
 
-                    # prompt: if Talep Tarihi column notna, color row to the red
-
                     def color_rows_by_talep_tarihi(df):
                         import pandas as pd
 
                         def highlight_rows(row):
                             if pd.notna(row['Talep Tarihi']):
-                                return ['background-color: red'] * len(row)
-                            return [''] * len(row)  # Return empty list for other rows
-
+                                return ['color: red'] * len(row)
+                            return [''] * len(row)  # No style for other rows
 
                         styled_df = df.style.apply(highlight_rows, axis=1)
                         return styled_df
+
 
                     # Example usage (assuming 'df_placed' is your DataFrame):
                     styled_df_home_transports = color_rows_by_talep_tarihi(df_home_transports)

@@ -12,6 +12,15 @@ import threading
 
 import pandas as pd
 import numpy as np
+import seaborn as sns
+
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.ticker as ticker
+
 import shutil
 import hashlib  # To handle unlock code generation via hashing
 from tkinter import messagebox  # To display error/info dialogs in the GUI
@@ -173,6 +182,10 @@ class LockManager:
 
         if self.is_unlocked_recently():
             return True  # No need to ask for the unlock code
+        else:
+            messagebox.showinfo("Registration Code Created",
+                    f"A file 'registration.txt' has been created in:\n{self.program_dir}\n"
+                    "Please send this file to the muhammedkaya65@gmail.com for an unlock code.")
 
         while True:
             unlock_code = simpledialog.askstring("Unlock Required", "Please enter the unlock code provided by the administrator:")
@@ -224,27 +237,61 @@ class AmbulanceApp:
         # Create splash screen window
         self.splash_screen = tk.Toplevel(self.root)
         self.splash_screen.overrideredirect(True)  # Borderless window
-        self.splash_screen.geometry("800x400+300+200")  # Set window size and position
-        self.splash_screen.configure(bg='#f0f4f7')  # Light background color
+        self.splash_screen.geometry("900x500+300+150")  # Larger, centered window
+        self.splash_screen.configure(bg='#0e0e0e')  # Dark background for neon effect
 
-        # Centered title "Vaka Yoğunluk Grafikeri"
-        self.title_label = tk.Label(self.splash_screen, text="Mükerrer Nakil Çalışması", font=("Helvetica", 24, "bold"), fg="#333", bg="#f0f4f7")
-        self.title_label.pack(pady=80)
-
-        # Dedication message fitted above the bottom text
-        self.dedication_message = (
-            "İstanbul İl Ambulans Servisi"
+        # Neon title
+        self.title_label = tk.Label(
+            self.splash_screen, 
+            text="🚀 Saha İçi Mükerrer Acil Vaka Çalışması 🚀", 
+            font=("Consolas", 28, "bold"), 
+            fg="#00FFFB",  # Neon cyan
+            bg="#0e0e0e"
         )
-        self.dedication_label = tk.Label(self.splash_screen, text=self.dedication_message, font=("Helvetica", 10, "italic"), fg="#555", bg="#f0f4f7", wraplength=750, justify="center")
-        self.dedication_label.pack(side="bottom", pady=(0, 40))  # Add padding to prevent overlap with bottom texts
+        self.title_label.pack(pady=60)
 
-        # Bottom left: "Avrupa 112" in minimal and light font
-        self.left_label = tk.Label(self.splash_screen, text="Muhammed KAYA", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
-        self.left_label.place(x=20, y=360)
+        # Subtitle
+        self.subtitle_label = tk.Label(
+            self.splash_screen, 
+            text="İstanbul İl Ambulans Servisi - Avrupa 112", 
+            font=("Consolas", 14, "italic"), 
+            fg="#ADFF2F",  # Neon green
+            bg="#0e0e0e"
+        )
+        self.subtitle_label.pack(pady=10)
 
-        # Bottom right: "Muhammed Kaya" in a bolder font
-        self.right_label = tk.Label(self.splash_screen, text="Avrupa 112", font=("Helvetica", 12), fg="#333", bg="#f0f4f7")
-        self.right_label.place(x=650, y=360)
+        # Neon loading bar
+        self.loading_bar_frame = tk.Frame(self.splash_screen, bg="#0e0e0e")
+        self.loading_bar_frame.pack(pady=40)
+        self.loading_bar = ttk.Progressbar(
+            self.loading_bar_frame, 
+            orient="horizontal", 
+            length=400, 
+            mode="indeterminate",
+            style="Neon.Horizontal.TProgressbar"
+        )
+        self.loading_bar.pack()
+        self.loading_bar.start()
+
+        # Styling the neon progress bar
+        style = ttk.Style()
+        style.theme_use("clam")
+        style.configure(
+            "Neon.Horizontal.TProgressbar",
+            troughcolor="#1c1c1c",
+            background="#00FFFB",
+            thickness=15
+        )
+
+        # Footer text
+        self.footer_label = tk.Label(
+            self.splash_screen, 
+            text="⚡ Muhammed Kaya ⚡", 
+            font=("Consolas", 12), 
+            fg="#FF1493",  # Neon pink
+            bg="#0e0e0e"
+        )
+        self.footer_label.pack(side="bottom", pady=30)
 
         # Destroy the splash screen after 5 seconds
         self.splash_screen.after(5000, self.end_splash_screen)
@@ -258,54 +305,71 @@ class AmbulanceApp:
 
     def create_widgets(self):
         # Set the window title
-        self.root.title("Avrupa 112 - Muhammed Kaya")
+        self.root.title("🚑 Avrupa 112")
 
         # Set the window size to be larger
-        self.root.geometry("900x600")  # Adjust the size as needed
+        self.root.geometry("1000x700")
+        self.root.configure(bg="#0e0e0e")  # Dark background for neon effect
 
-        # Configure a new style for rounded buttons
+        # Neon button styles
         style = ttk.Style()
-        style.theme_use("clam")  # Use the 'clam' theme for modern look
-        style.configure("Rounded.TButton", font=("Helvetica", 10), padding=10, relief="flat", borderwidth=1, width=20, anchor="center")
-        style.map("Rounded.TButton", background=[("active", "#b3cde0")])  # Color change on hover
+        style.theme_use("clam")
+        style.configure(
+            "Neon.TButton",
+            font=("Consolas", 14, "bold"),
+            padding=10,
+            relief="flat",
+            borderwidth=0,
+            background="#00FFFB",
+            foreground="#0e0e0e",
+            anchor="center"
+        )
+        style.map(
+            "Neon.TButton",
+            background=[("active", "#ADFF2F"), ("pressed", "#FF1493")],
+            foreground=[("active", "#0e0e0e"), ("pressed", "#ffffff")]
+        )
 
         # Initialize a list to hold the paths of loaded files and their regions
         self.loaded_files = []
 
-        # Status label (placed first to ensure it's available before being referenced)
-        self.status_label = tk.Label(self.root, text="Durum: Veri bekleniyor...", font=("Helvetica", 12))
-        self.status_label.pack(pady=10)
+        # Status label
+        self.status_label = tk.Label(self.root, text="Gerekli Belgeler: Genel Vaka Araştırma Raporu, İsim Listesi", font=("Consolas", 14), fg="#ADFF2F", bg="#0e0e0e")
+        self.status_label.pack(pady=20)
 
         # Ensure only one instance of each widget is created
         if not hasattr(self, 'load_files_button'):
             # Load Multiple Files button with same size and smaller text
-            self.load_files_button = ttk.Button(self.root, text="Dosyaları Yükle", command=self.load_multiple_files, style="Rounded.TButton")
-            self.load_files_button.pack(pady=10)
+            self.load_files_button = ttk.Button(self.root, text="🗂 Dosyaları Yükle", command=self.load_multiple_files, style="Neon.TButton")
+            self.load_files_button.pack(pady=15)
 
         if not hasattr(self, 'delete_file_button'):
             # Delete Selected File button with same size and smaller text
-            self.delete_file_button = ttk.Button(self.root, text="Dosyayı Sil", command=self.delete_selected_file, style="Rounded.TButton")
-            self.delete_file_button.pack(pady=10)
+            self.delete_file_button = ttk.Button(self.root, text="🗑 Dosyayı Sil", command=self.delete_selected_file, style="Neon.TButton")
+            self.delete_file_button.pack(pady=15)
 
         if not hasattr(self, 'save_path_button'):
             # Choose Save Path button with same size and smaller text
-            self.save_path_button = ttk.Button(self.root, text="Kaydetme Konumu", command=self.choose_save_path, style="Rounded.TButton")
-            self.save_path_button.pack(pady=10)
+            self.save_path_button = ttk.Button(self.root, text="💾 Kaydetme Konumu", command=self.choose_save_path, style="Neon.TButton")
+            self.save_path_button.pack(pady=15)
 
         if not hasattr(self, 'generate_graphs_button'):
             # Generate Graphs button with same size and smaller text
-            self.generate_graphs_button = ttk.Button(self.root, text="Başla", state=tk.DISABLED, command=self.start_generate_graphs_thread, style="Rounded.TButton")
-            self.generate_graphs_button.pack(pady=10)
+            self.generate_graphs_button = ttk.Button(self.root, text="🚀 Başla", state=tk.DISABLED, command=self.start_generate_graphs_thread, style="Neon.TButton")
+            self.generate_graphs_button.pack(pady=15)
 
         if not hasattr(self, 'file_listbox'):
             # File listbox to display selected files (allows user to see uploaded files)
-            self.file_listbox = Listbox(self.root, width=80, height=8, font=("Helvetica", 10))
-            self.file_listbox.pack(pady=10)
+            self.file_listbox = tk.Listbox(self.root, width=80, height=10, font=("Consolas", 12), bg="#1c1c1c", fg="#00FFFB", selectbackground="#ADFF2F")
+            self.file_listbox.pack(pady=20)
 
         if not hasattr(self, 'progress'):
             # Progress bar
-            self.progress = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="indeterminate")
-            self.progress.pack(pady=10)
+            self.progress = ttk.Progressbar(self.root, orient="horizontal", length=600, mode="indeterminate", style="Neon.Horizontal.TProgressbar")
+            self.progress.pack(pady=20)
+            # Start progress bar animation
+     
+            self.progress.start()
 
 
     def load_multiple_files(self):
@@ -327,7 +391,7 @@ class AmbulanceApp:
                 for index, file in enumerate(files):
                     self.status_label.config(text=f"Loading {index+1} of {total_files} files...")
 
-                    # Prompt the user to select the region for each file
+                    # the user to select the region for each file
                     region = self.choose_region_dialog(file)
 
                     # Add file and region to the loaded_files list
@@ -348,7 +412,7 @@ class AmbulanceApp:
 
 
     def choose_region_dialog(self, file):
-        """Open a dialog box with a dropdown menu for selecting Emergency(Sahadan Hastaneye Defter) or Internal Trasnports (Nakil Defter)."""
+        """Open a dialog box with a dropdown menu for selecting Emergency(Sahadan Hastaneye Defter) or staff Names (İsim Listesi)."""
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Defter Tipi Seç {file.split('/')[-1]}")
         dialog.geometry("300x100")
@@ -361,7 +425,7 @@ class AmbulanceApp:
         region_var = tk.StringVar(dialog)
         region_var.set("Sahadan Hastaneye Defter")  # Default value
 
-        region_dropdown = ttk.OptionMenu(dialog, region_var, "Sahadan Hastaneye Defter", "Sahadan Hastaneye Defter", "Nakil Defter")
+        region_dropdown = ttk.OptionMenu(dialog, region_var, "Sahadan Hastaneye Defter", "Sahadan Hastaneye Defter", "İsim Listesi")
         region_dropdown.pack(pady=10)
 
         # Button to confirm selection
@@ -396,11 +460,11 @@ class AmbulanceApp:
         else:
             messagebox.showwarning("Uyarı", "Silinecek dosya seçilmedi!")
 
-    
 
     # Threads for loading and generating
     def start_load_europe_thread(self):
         """Start a separate thread to load Europe data."""
+ 
         self.progress.start()
         thread = threading.Thread(target=self.load_europe_data)
         thread.start()
@@ -461,7 +525,7 @@ class AmbulanceApp:
             self.progress.stop()
 
     def load_asia_data(self):
-        asia_file = filedialog.askopenfilename(title="Nakil Defter Seç", filetypes=[("All Files", "*.*")])
+        asia_file = filedialog.askopenfilename(title="İsim Listesi Seç", filetypes=[("All Files", "*.*")])
 
         if not asia_file:
             messagebox.showerror("Hata", "Lütfen Geçerli Bir Dosya Seç!")
@@ -469,23 +533,23 @@ class AmbulanceApp:
             return
 
         try:
-            self.df_asia = self.load_and_process_data(asia_file, 'Nakil Defter')  # Fill this function
-            self.status_label.config(text="Durum: Nakil Defter Başarıyla Yüklendi!")
+            self.df_asia = self.load_and_process_data(asia_file, 'İsim Listesi')  # Fill this function
+            self.status_label.config(text="Durum: İsim Listesi Başarıyla Yüklendi!")
 
             # Show the selected Asia file in the listbox
-            self.file_listbox.insert(tk.END, f"Nakil Defter: {asia_file.split('/')[-1]}")
+            self.file_listbox.insert(tk.END, f"İsim Listesi: {asia_file.split('/')[-1]}")
 
             self.check_data_loaded()
         except Exception as e:
-            messagebox.showerror("Hata", f"Nakil Defter yüklenemedi: {e}")
-            self.status_label.config(text="Durum: Nakil Defter yüklenemedi")
+            messagebox.showerror("Hata", f"İsim Listesi yüklenemedi: {e}")
+            self.status_label.config(text="Durum: İsim Listesi yüklenemedi")
         finally:
             self.progress.stop()
             
     def load_and_process_data(self, file_path, region):
         """This function loads and processes the data from the specified Excel file."""
         df = pd.read_excel(file_path)
-        df['workbook'] = region  # Set region as 'Sahadan Hastaneye Defter' or 'Nakil Defter'
+        df['workbook'] = region  # Set region as 'Sahadan Hastaneye Defter' or 'İsim Listesi'
 
         return df
 
@@ -521,6 +585,7 @@ class AmbulanceApp:
             self.progress.update()
 
         def run_graph_generation():
+        
             self.progress["value"] = 0
             self.progress.config(mode="determinate")  # Reset and switch to determinate mode
             try:
@@ -567,221 +632,286 @@ class AmbulanceApp:
                     
                     if df_reports.empty:
                         return messagebox.showerror("Error", "No valid data available to generate file.")
+                    
 
+                    df= df_reports
+                    df_staff_list= df_internal_transports
 
-                    df_placed= df_internal_transports[df_internal_transports['Durum'] == 'Yer Ayarlandı'].copy()
-                    df_reports.drop_duplicates(inplace=True)
-                    df_placed.drop_duplicates(inplace=True)
-                    df_reports['is_baby']= False
-                    df_placed['is_baby']= False
-
-                    df_reports.reset_index(inplace=True)
-                    df_placed.reset_index(inplace=True)
-
-                    df_reports.rename(columns= {'ICD10 TANI\nADI':'ICD10 TANI ADI'}, inplace=True)
-                    reports_columns= ['İhbar/Çağrı Tarihi', 'İhbar/Çağrı  Saati', 'Hasta Adı', 'Hasta Soyadı', 'Vaka Veriliş\nTarihi','Vaka Veriliş\nSaati','MANUEL DÜZENLEME Nakledilen Hastane',  'ICD10 TANI KODU', 'ICD10 TANI ADI']
-                    placed_columns= ['Hasta Ad', 'Hasta Soyad','Talep Tarihi','Düzenlenmiş Nakil Talep Eden Hastane', 'Yer Bulunma Tarihi']
+                    reports_columns= ['Vaka Veriliş\nTarihi','Vaka Veriliş\nSaati', 'Sonuç', 'Ekipteki Kişiler','Tc Kimlik No\n', 'ICD10 TANI\nADI','Triaj']
+                    
+                    option = messagebox.askquestion(
+                        "Filter Option",
+                        "İsim ve Soyisim sütunları birleşik mi?"
+                        )
+                    if option == 'yes':
+                        staff_name_columns= ['İsim Soyisim']
+                    else:  
+                        staff_name_columns= ['İsim','Soyisim']
                     
                     reports_missing_columns= [col for col in reports_columns if col not in df_reports.columns]
-                    placed_missing_columns= [col for col in placed_columns if col not in df_placed.columns]
+                    staff_name_missing_columns= [col for col in staff_name_columns if col not in df_staff_list.columns]
                     
-                    non_existent_cols= []
+                    
                     for col in reports_missing_columns:
-                        prompt_text = f"Sahadan Hastaneye Defter'de bulunamayan kolon: {col}, \nŞu an defterde mevcut olan kolon adı giriniz, kolon artık mevcut değilse boş bırakınız: "
+                        prompt_text = f"Sahadan Hastaneye Defter'de bulunamayan kolon: {col}, \nŞu an defterde mevcut olan kolon adı giriniz: "
                         new_col = str(self.ask_string_main_thread(prompt_text))
 
                         if not new_col:
-                            reports_columns.remove(col)
-                            non_existent_cols.append(col)
-                            continue
+                            return messagebox.showerror("Error", f'Eksik {col} sütununu tamamlayınız!')
 
-                        df_reports.rename(columns={new_col:col}, inplace=True)
+                        df.rename(columns={new_col:col}, inplace=True)
 
-                    for col in placed_missing_columns:
-                        prompt_text = f"Nakil Defterde Bulunamayan Kolon: {col},\nŞu an defterde mevcut olan kolon adı giriniz, kolon artık mevcut değilse boş bırakınız:"
+                    for col in staff_name_missing_columns:
+                        prompt_text = f"İsim Listeside Bulunamayan Kolon: {col},\nŞu an defterde mevcut olan kolon adı giriniz:"
                         new_col = str(self.ask_string_main_thread(prompt_text))
+
                         if not new_col:
-                            placed_columns.remove(col)
-                            non_existent_cols.append(col)
-                            continue
-
-                        df_placed.rename(columns={new_col:col}, inplace=True)
-
-                    placed_baby_index= df_placed[df_placed['Hasta Ad'].astype(str).str.lower().astype(str).str.contains('bebek')].index
-                    df_placed.loc[placed_baby_index, 'is_baby']= True
-
-                    reports_baby_index= df_reports[df_reports['Hasta Adı'].astype(str).str.lower().astype(str).str.contains('bebek')].index
-                    df_reports.loc[reports_baby_index, 'is_baby']= True
-
-                    df_placed['Hasta Ad_upper']= df_placed['Hasta Ad'].astype(str).str.strip().astype(str).str.upper()
-                    df_reports['Hasta Adı_upper']= df_reports['Hasta Adı'].astype(str).str.strip().astype(str).str.upper()
+                            return messagebox.showerror("Error", f'Eksik {col} sütununu tamamlayınız!')
+                        
+                        df_staff_list.rename(columns={new_col:col}, inplace=True)
 
 
-
-                    df_reports['Hasta Soyadı_upper']= df_reports['Hasta Soyadı'].astype(str).str.strip().astype(str).str.upper()
-                    df_placed['Hasta Soyad_upper']= df_placed['Hasta Soyad'].astype(str).str.strip().astype(str).str.upper()
-
-                    df_reports.loc[df_reports['is_baby']==True, 'Hasta Adı_upper']= 'BEBEK'
-                    df_placed.loc[df_placed['is_baby']==True, 'Hasta Ad_upper']= 'BEBEK'
-
-                    df_placed['Hasta Ad_upper']= df_placed['Hasta Ad_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.replace('2', '').astype(str).str.strip()
-                    df_reports['Hasta Adı_upper']= df_reports['Hasta Adı_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.replace('1', '').astype(str).str.replace('2', '').astype(str).str.strip()
-                    df_placed['Hasta Soyad_upper']= df_placed['Hasta Soyad_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.strip()
-                    df_reports['Hasta Soyadı_upper']= df_reports['Hasta Soyadı_upper'].astype(str).str.strip().astype(str).str.replace('i','İ').astype(str).str.replace('ü','Ü').astype(str).str.replace('ç','Ç').astype(str).str.replace('ğ','Ğ').astype(str).str.replace('ş','Ş').astype(str).str.replace('ö','Ö').astype(str).str.upper().astype(str).str.strip()
-                    df_placed.rename(columns= {'Hasta Ad_upper':'Hasta Adı_upper', 'Hasta Soyad_upper':'Hasta Soyadı_upper'}, inplace= True)
-
-                    df_reports['Nakledilen-Nakil Talep Eden Hastane']= df_reports['MANUEL DÜZENLEME Nakledilen Hastane']
-                    df_placed['Nakledilen-Nakil Talep Eden Hastane']= df_placed['Düzenlenmiş Nakil Talep Eden Hastane']
-
-                    df_reports['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati'] = pd.to_datetime(
-                        df_reports['İhbar/Çağrı Tarihi'] + ' ' + df_reports['İhbar/Çağrı  Saati'],
-                        format='%d-%m-%Y %H:%M:%S', errors='coerce'
-                    )
-
-                    df_reports['Vaka Veriliş Tarih Saat']= pd.to_datetime(df_reports['Vaka Veriliş\nTarihi'] + ' '+ df_reports['Vaka Veriliş\nSaati'], format= '%d-%m-%Y %H:%M:%S', errors='coerce')
-
-                    df_placed['Yer Bulunma Tarihi']= pd.to_datetime(df_placed['Yer Bulunma Tarihi'], format= '%d-%m-%Y %H:%M:%S', errors='coerce')
-                    df_placed['Talep Tarihi']= pd.to_datetime(df_placed['Talep Tarihi'], format= '%d-%m-%Y %H:%M:%S', errors='coerce')
-
-                    df_reports['Tarih']= df_reports['Vaka Veriliş Tarih Saat']
-                    df_placed['Tarih']= df_placed['Talep Tarihi']
-
-                    df_placed.drop(columns='index', inplace=True)
-                    df_reports.drop(columns='index', inplace=True)
-
-                    df_placed.reset_index(inplace=True)
-                    df_reports.reset_index(inplace=True)
-
-                    merged_df = pd.merge(df_placed.reset_index(), df_reports.reset_index(), on=['Hasta Adı_upper', 'Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane'], how='inner')
-
-                    merged_df['one_day']= (merged_df['Tarih_x'] - merged_df['Tarih_y']).between(dt.timedelta(days=0), dt.timedelta(days=1), inclusive='both')
-
-                    merged_df= merged_df[merged_df['one_day']==True]
-
-                    df_placed.loc[merged_df['index_x']]
-
-                    df_reports.loc[merged_df['index_y']]
-
-                    second_frame= pd.concat([df_placed.loc[merged_df['index_x']], df_reports.loc[merged_df['index_y']]])
-
-                    second_frame.sort_values(by=['Hasta Adı_upper', 'Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane', 'Tarih'], inplace=True)
-
-                    second_frame.insert(0,'Hasta Adı_upper', second_frame.pop('Hasta Adı_upper'))
-                    second_frame.insert(1,'Hasta Soyadı_upper', second_frame.pop('Hasta Soyadı_upper'))
-                    second_frame.insert(2,'Nakledilen-Nakil Talep Eden Hastane', second_frame.pop('Nakledilen-Nakil Talep Eden Hastane'))
-                    second_frame.insert(3,'Tarih', second_frame.pop('Tarih'))
-
-                    second_frame['Hasta Ad Soyad_upper']= second_frame['Hasta Adı_upper'] + ' ' + second_frame['Hasta Soyadı_upper']
-
-                    the_frame = pd.DataFrame()
-
-                    for name, group in second_frame.groupby(['Hasta Ad Soyad_upper', 'Nakledilen-Nakil Talep Eden Hastane']):
-                        group_one = group.sort_values(by='Tarih').copy()  # Ensure a copy is created
-
-
-                        if len(group_one) > 1:
-                            for loop in range(5):
-
-                                # Ensure that 'group' is not empty before checking iloc[0]
-                                while len(group_one) > 0 and group_one.iloc[0]['workbook'] == 'Nakil Defter':
-                                    group_one = group_one.iloc[1:].copy()  # Ensure copy to avoid warnings/issues
-
-                                # Check if group_one has at least 2 elements before accessing iloc[1]
-                                while len(group_one) > 1 and (group_one.iloc[0]['workbook'] == 'Sahadan Hastaneye Defter') and (group_one.iloc[1]['workbook'] == 'Sahadan Hastaneye Defter'):
-                                    group_one = group_one.iloc[1:].copy()  # Ensure copy to avoid warnings/issues
-
-                                while len(group_one) > 1 and (group_one.iloc[-1]['workbook'] == 'Nakil Defter') and (group_one.iloc[-2]['workbook'] == 'Nakil Defter'):
-                                    group_one = group_one.iloc[:-1].copy()  # Ensure copy to avoid warnings/issues
-
-                                while len(group_one) > 0 and group_one.iloc[-1]['workbook'] == 'Sahadan Hastaneye Defter':
-                                    group_one = group_one.iloc[:-1].copy()  # Ensure copy to avoid warnings/issues
-
-                                while len(group_one) > 1 and group_one.iloc[1]['Tarih'] - group_one.iloc[0]['Tarih'] > dt.timedelta(days=1):
-                                    try:
-                                        group_one = group_one.iloc[2:].copy()  # Ensure copy to avoid warnings/issues
-                                    except:
-                                        group_one = pd.DataFrame()
-                                        break
-
-
-                        # Corrected condition to check if all values are 'Sahadan Hastaneye Defter'
-                        elif (group_one['workbook'] == 'Sahadan Hastaneye Defter').all():
-                            group_one = pd.DataFrame()
-                            continue
-                        elif (group_one['workbook'] == 'Nakil Defter').all():
-                            group_one = pd.DataFrame()
-                            continue
-                        elif len(group_one) < 2:
-                            group_one = pd.DataFrame()
-                            continue
-                        else:
-                            group_one = pd.DataFrame()
-
-                        the_frame = pd.concat([the_frame, group_one])
-
-
-                    the_frame.rename(columns={'Hasta Adı_upper':'Hasta Adı', 'Hasta Soyadı_upper':'Hasta Soyadı', 'Hasta Ad Soyad_upper':'Hasta Ad Soyad'}, inplace=True)
-                    the_frame.insert(2,'Hasta Adı Hasta Soyadı', the_frame.pop('Hasta Ad Soyad'))
-
-                    the_frame.drop(columns='index', inplace=True)
-
-                    the_frame.reset_index(drop=True, inplace=True)
-
-                    df_placed.drop(columns=['index','Hasta Adı_upper','Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane', 'Tarih', 'is_baby'], inplace=True)
-
-                    columns= ['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati', 'Hasta Adı Hasta Soyadı',
-                            'MANUEL DÜZENLEME Nakledilen Hastane', 'ICD10 TANI KODU',
-                            'ICD10 TANI ADI'] + list(df_placed.columns[1:])
-                    
-                    for col in non_existent_cols:
-                        try:
-                            columns.remove(col)
-                        except:
-                            pass
-
-                    the_frame= the_frame[columns]
-
-                    the_frame['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati'].fillna(the_frame['Talep Tarihi'], inplace=True)
-                    the_frame['MANUEL DÜZENLEME Nakledilen Hastane'].fillna(method='ffill', inplace=True)
-
-
-                    home = the_frame[the_frame['Sevk Nedeni']=='EVE NAKİL'].index
-                    if not home.empty:
-                        home_transports= []
-                        for i in home:
-                            home_transports.append(i-1)
-                            home_transports.append(i)
-
-                        df_home_transports= the_frame.iloc[home_transports]
+                    if option == 'yes':
+                        df_staff_list['İsim Soyisim']= df_staff_list['İsim Soyisim'].astype(str).str.strip()
+                        df_staff_list= df_staff_list[df_staff_list['İsim Soyisim'] != 'nan']
+                        df_staff_list= df_staff_list[df_staff_list['İsim Soyisim'] != 'İsim Soyisim']
+                        staff_list=list(df_staff_list['İsim Soyisim'].unique())
                     else:
-                        df_home_transports= pd.DataFrame()
+                        df_staff_list['İsim Soyisim']= (df_staff_list['İsim'] + ' ' + df_staff_list['Soyisim']).astype(str).str.strip()
+                        staff_list=list( df_staff_list['İsim Soyisim'].unique())
+                        staff_list.remove('nan')
+                    df['Vaka Veriliş Tarih Saat']=pd.to_datetime(df['Vaka Veriliş\nTarihi'] + ' ' + df['Vaka Veriliş\nSaati'], format='%d-%m-%Y %H:%M:%S')
+                    df= df[(df['Tc Kimlik No\n'].notna() )& (df['Tc Kimlik No\n'] != 'U0')]
+                    df['Tc Kimlik No\n']= df['Tc Kimlik No\n'].astype(str).str.strip().astype(str).str.upper()
+                    df.drop(columns=['Vaka Veriliş\nTarihi', 'Vaka Veriliş\nSaati'], inplace=True)
+                    df.reset_index(drop=True, inplace=True)
+                    df['Ekipteki Kişiler']= df['Ekipteki Kişiler'].astype(str).str.strip()
+                    df['index']= df.index
 
-                    the_frame.drop(home_transports, inplace=True)
-
-                    # prompt: if Talep Tarihi column notna, color row to the red
+                    # if Sonuç column mathces criteria, color row to the red
 
                     def color_rows_by_talep_tarihi(df):
-                        import pandas as pd
 
                         def highlight_rows(row):
-                            if pd.notna(row['Talep Tarihi']):
+                            if row['Sonuç'] in ['Yerinde Müdahale', 'Nakil - Red','Diğer']:
                                 return ['background-color: red'] * len(row)
                             return [''] * len(row)  # Return empty list for other rows
-
+                            
 
                         styled_df = df.style.apply(highlight_rows, axis=1)
                         return styled_df
 
-                    # Example usage (assuming 'df_placed' is your DataFrame):
-                    styled_df_home_transports = color_rows_by_talep_tarihi(df_home_transports)
-                    styled_the_frame= color_rows_by_talep_tarihi(the_frame)
-
-                    with pd.ExcelWriter(self.save_path + '/'+ 'Nakil Defteri Mükerrer Çalışması.xlsx', engine='openpyxl') as writer:
-                        styled_the_frame.to_excel(writer, sheet_name='mükerrer', index=False)
-                        styled_df_home_transports.to_excel(writer, sheet_name='eve nakil', index=False)
 
 
-                    self.status_label.config(text="Mükerrer Nakil Dosyası Oluşturuluyor...")
+                    df_general_analysis= pd.DataFrame(columns=['İsim Soyisim',
+                                           'Toplam Vaka Sayısı',
+                                           'Toplam Yerinde Müdahale-Nakil Red-Diğer Sayısı',
+                                           'Yerinde-Red-Diğer / Toplam Vaka Yüzdesi',
+                                           '48 Saat Mükerrer Sayısı (Son hastaneye Nakil Dahil)',
+                                           '24 Saat Mükerrer Sayısı (Son Hastaneye Nakil Dahil)',
+                                           '48 Saat Mükerrer Sayısı (Son Hastaneye Nakil Hariç)',
+                                           '24 Saat Mükerrer Sayısı (Son Hastaneye Nakil Hariç)',
+                                           'Kırmızı Kodla Sonuçlanan (48 Saat)',
+                                           'Sarı Kodla Sonuçlanan (48 Saat)',
+                                           'Yeşil Kodla Sonuçlanan (48 Saat)',
+                                           'Siyah Kodla Sonuçlanan (48 Saat)',
+                                           '48 Saat Kardiyak Arrest veya Ölümle Sonuçlanan',
+                                           '24 Saat Kardiyak Arrest veya Ölümle Sonuçlanan'
+                                           ])
+                    for doc in staff_list:
+                        red_count= 0
+                        yellow_count= 0
+                        green_count= 0
+                        black_count= 0
+                        arrest_count= 0
+                        total_case= 0
+                        yerinde_red= 0
+                        forty_eight_hours_count= 0
+                        twenty_four_hours_count= 0
+                        forty_eight_only_false= 0
+                        twenty_four_only_false= 0
+                        twenty_four_arrest_count= 0
+
+                        df_doc= df[df['Ekipteki Kişiler'].astype(str).str.contains(doc)]
+                        total_case= len(df_doc)
+                        df_not_placed= df_doc[df_doc['Sonuç'].isin(['Yerinde Müdahale', 'Nakil - Red','Diğer'])].copy()
+                        yerinde_red= len(df_not_placed)
+                        try:
+                            yerinde_total_percentage= round((yerinde_red/total_case)*100,2)
+                        except:
+                            yerinde_total_percentage= 0
+                        df_placed= df[~df['Sonuç'].isin(['Yerinde Müdahale', 'Nakil - Red','Diğer'])].copy()
+                        df_merged= pd.merge(df_placed, df_not_placed, on= 'Tc Kimlik No\n')
+                        df_merged['Vaka Veriliş Tarih Saat_x']= pd.to_datetime(df_merged['Vaka Veriliş Tarih Saat_x'], format='%Y-m-%d %H:%M:%S')
+                        df_merged['Vaka Veriliş Tarih Saat_y']= pd.to_datetime(df_merged['Vaka Veriliş Tarih Saat_y'], format='%Y-m-%d %H:%M:%S')
+                        df_merged['is_scondary']= (df_merged['Vaka Veriliş Tarih Saat_x'] - df_merged['Vaka Veriliş Tarih Saat_y']).between(dt.timedelta(days=0), dt.timedelta(days=2), inclusive='both')
+                        df_matched= df_merged[df_merged['is_scondary']== True]
+                        forty_eight_only_false= len(df_merged[df_merged['is_scondary']== True])
+                        twenty_four_matched= df_merged.copy()
+                        twenty_four_matched['is_secondary']= (twenty_four_matched['Vaka Veriliş Tarih Saat_x'] - twenty_four_matched['Vaka Veriliş Tarih Saat_y']).between(dt.timedelta(days=0), dt.timedelta(days=1), inclusive='both')
+                        twenty_four_matched= twenty_four_matched[twenty_four_matched['is_secondary']== True]
+                        twenty_four_only_false= len(twenty_four_matched)
+                        df_matched_final= pd.DataFrame()
+
+                        for placed_index, not_placed_index in zip(df_matched['index_x'].to_list(), df_matched['index_y'].to_list()):
+                            df_matched_final= pd.concat([df_matched_final, df.loc[[not_placed_index, placed_index]]])
+                        forty_eight_hours_count= len(df_matched_final)
+                        twenty_four_hours_count= len(twenty_four_matched)
+
+                        df_matched_final_twenty_four= pd.DataFrame()
+                        for placed_index, not_placed_index in zip(twenty_four_matched['index_x'].to_list(), twenty_four_matched['index_y'].to_list()):
+                            df_matched_final_twenty_four= pd.concat([df_matched_final_twenty_four, df.loc[[not_placed_index, placed_index]]])
+                        twenty_four_hours_count= len(df_matched_final_twenty_four)
+
+                        if len(df_matched_final_twenty_four) > 1:
+                            df_counts_3= df_matched_final_twenty_four[~df_matched_final_twenty_four['Sonuç'].isin(['Yerinde Müdahale', 'Nakil - Red','Diğer'])]
+                            df_counts_3= df_matched_final_twenty_four[df_matched_final_twenty_four['ICD10 TANI\nADI'].astype(str).str.contains('ARREST|ÖLÜM')]
+                        if len(df_counts_3)>0:
+                            twenty_four_arrest_count= len(df_counts_3)
+                        else:
+                            twenty_four_arrest_count= 0
+                        if len(df_matched_final) > 0:
+
+                            df_counts= df_matched_final[df_matched_final['Sonuç'].isin(['Yerinde Müdahale', 'Nakil - Red','Diğer'])]
+
+                            df_counts['count']= 1
+
+                            df_counts_2= df_matched_final[~df_matched_final['Sonuç'].isin(['Yerinde Müdahale', 'Nakil - Red','Diğer'])]
+                        for triage in df_counts_2['Triaj']:
+                            if triage=='Kırmızı Kod':
+                                red_count+=1
+                            elif triage=='Sarı Kod':
+                                yellow_count+=1
+                            elif triage=='Yeşil Kod':
+                                green_count+=1
+                            elif triage=='Siyah Kod':
+                                black_count+=1  
+                        df_counts_2= df_counts_2[df_counts_2['ICD10 TANI\nADI'].astype(str).str.contains('ARREST|ÖLÜM')]
+                        arrest_count= len(df_counts_2)
+                        df_general_analysis.loc[len(df_general_analysis.index)] = [doc,total_case,yerinde_red,yerinde_total_percentage,forty_eight_hours_count,twenty_four_hours_count,forty_eight_only_false,twenty_four_only_false,red_count, yellow_count, green_count, black_count, arrest_count,twenty_four_arrest_count]
+                        
+                        if len(df_matched_final)>0:
+                            df_matched_final.reset_index(drop=True, inplace=True)
+
+                            styled_the_frame= color_rows_by_talep_tarihi(df_matched_final)
+                            # Check for duplicate columns
+                            if styled_the_frame.columns.duplicated().any():
+                                print("Warning: DataFrame contains duplicate column names.")
+                                styled_the_frame.columns = [f"{col}_{i}" if styled_the_frame.columns.tolist().count(col) > 1 else col 
+                                                            for i, col in enumerate(styled_the_frame.columns)]
+
+                            # Ensure unique row indices
+                            
+
+                            with pd.ExcelWriter(self.detailed_path + '/'+ f'{doc} 48-24 Saat Mükerrer Vaka.xlsx', engine='openpyxl') as writer:
+                                # Ensure at least one visible sheet
+                                styled_the_frame.to_excel(writer, sheet_name='mükerrer', index=False)
+                                workbook = writer.book
+                                for sheet in workbook.worksheets:
+                                    sheet.sheet_state = 'visible'
+                        else:
+                            pass
+
+                    
+                    df_general_analysis.to_excel(self.main_path + '/Genel Analiz.xlsx', index=False)
+                    
+                    def generate_visualized_graphs(df_general_analysis):
+                        #########################################
+                        if len(df_general_analysis)>20:
+                            plt.figure(figsize=(20, 10))
+                        else:
+                            plt.figure(figsize=(10, 5))
+
+                        ax = sns.barplot(x='İsim Soyisim', y='48 Saat Mükerrer Sayısı (Son hastaneye Nakil Dahil)', data=df_general_analysis[df_general_analysis['48 Saat Mükerrer Sayısı (Son hastaneye Nakil Dahil)']> 0])
+                        plt.xticks(rotation=90)
+                        plt.xlabel("Doktor Adı")
+                        plt.ylabel("48 Saat Mükerrer Sayısı")
+                        plt.title("48 Saat Toplam Mükerrer Sayısı")
+                        plt.tight_layout()
+
+                        # Annotate bars with their values
+                        for p in ax.patches:
+                            ax.annotate(format(p.get_height(), '.0f'),
+                                        (p.get_x() + p.get_width() / 2., p.get_height()),
+                                        ha = 'center', va = 'center',
+                                        xytext = (0, 9),
+                                        textcoords = 'offset points')
+                        plt.savefig(self.visio_path + '/48 Saat Toplam Mukerrer Sayisi.png')
+                        ###################################################
+                        if len(df_general_analysis)>20:
+                            plt.figure(figsize=(20, 10))
+                        else:
+                            plt.figure(figsize=(10, 5))
+
+                        # Melt the dataframe
+                        df_melted = pd.melt(
+                            df_general_analysis,
+                            id_vars=['İsim Soyisim'],
+                            value_vars=['Kırmızı Kodla Sonuçlanan (48 Saat)', 'Sarı Kodla Sonuçlanan (48 Saat)', 'Yeşil Kodla Sonuçlanan (48 Saat)', 'Siyah Kodla Sonuçlanan (48 Saat)'],
+                            var_name='Triage Code',
+                            value_name='Number of Cases'
+                        )
+                        df_melted = df_melted[df_melted['Number of Cases'] >0]
+                        # Define a custom color palette
+                        custom_palette = {
+                            'Kırmızı Kodla Sonuçlanan (48 Saat)': 'red',
+                            'Sarı Kodla Sonuçlanan (48 Saat)': 'yellow',
+                            'Yeşil Kodla Sonuçlanan (48 Saat)': 'green',
+                            'Siyah Kodla Sonuçlanan (48 Saat)': 'black'
+                        }
+
+                        # Create the barplot with the custom palette
+                        sns.barplot(
+                            x='İsim Soyisim',
+                            y='Number of Cases',
+                            hue='Triage Code',
+                            data=df_melted,
+                            palette=custom_palette  # Apply the custom color palette
+                        )
+
+
+
+                        plt.xticks(rotation=90)
+                        plt.xlabel('Doktor Adı')
+                        plt.ylabel('48 Saat Vaka Sayısı')
+                        plt.title('Triaj Koduna Göre agilim')
+                        plt.legend(title='Triaj Koduna Göre Mükerrer Sayıları (48 Saat)')
+                        plt.tight_layout()
+                        plt.savefig(self.visio_path + '/Triaj Koduna Gore Dagilim.png')
+                        ####################################################################
+
+                        if len(df_general_analysis)>20:
+                            plt.figure(figsize=(20, 10))
+                        else:
+                            plt.figure(figsize=(10, 5))
+
+                        ax = sns.barplot(x='İsim Soyisim', y='48 Saat Mükerrer Sayısı (Son hastaneye Nakil Dahil)',
+                                        data=df_general_analysis[df_general_analysis['48 Saat Mükerrer Sayısı (Son hastaneye Nakil Dahil)'] != 0])
+
+                        plt.xticks(rotation=90)
+                        plt.xlabel("Doctor's Name")
+                        plt.ylabel("Total Cases")
+                        plt.title("48 Saat Kardiyak Arrest veya Ölümle Sonuçlanan")
+
+                        # Set y-axis ticks to integers starting from 0
+                        ax.yaxis.set_major_locator(ticker.MultipleLocator(1)) # Set ticks every 1 unit
+                        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))
+
+                        plt.tight_layout()
+
+                        # Annotate bars with their values
+                        for p in ax.patches:
+                            ax.annotate(format(p.get_height(), '.0f'),
+                                        (p.get_x() + p.get_width() / 2., p.get_height()),
+                                        ha = 'center', va = 'center',
+                                        xytext = (0, 9),
+                                        textcoords = 'offset points')
+                        plt.savefig(self.visio_path + '/48 Saat Kardiyak Arrest veya Olumle Sonuclanan.png')
+                    
+                    generate_visualized_graphs(df_general_analysis)
+
+
+                    self.status_label.config(text="Mükerrer Acil Vaka Çalışması Oluşturuluyor...")
                     self.status_label.config(text="Dosya başarıyla oluşturuldu.")
                 else:
                     messagebox.showerror("Error", "Dosya Bulunamadı.")
@@ -803,6 +933,15 @@ class AmbulanceApp:
         self.save_path = filedialog.askdirectory(title="Kaydetme Konumu Seç")
         if self.save_path:
             self.status_label.config(text=f"Durum: Kaydetme konumu seçildi: {self.save_path}")
+            # Set the directory paths, then create the directories if they don't exist
+            self.main_path= os.path.join(self.save_path, 'Mükerrer Nakil Çalışması')
+            os.makedirs(self.main_path, exist_ok=True)
+            self.detailed_path = os.path.join(self.main_path, 'Detaylı Grafikler')
+            self.visio_path = os.path.join(self.main_path, 'Görsel Grafikler')
+            
+            os.makedirs(self.detailed_path, exist_ok=True)
+            os.makedirs(self.visio_path, exist_ok=True)
+
 
 
 # Start the program
@@ -811,7 +950,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially
