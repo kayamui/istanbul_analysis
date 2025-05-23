@@ -89,6 +89,7 @@ def main():
         icd_df = pd.read_excel(os.path.join(data_folder, 'icd_keyword.xlsx'))
         icd_dict = dict(zip(icd_df["ICD10 1'İNCİ SEVİYE GRUP ADI"], icd_df["MANUEL ICD DÜZENLEME"]))
         df['MANUEL ICD DÜZENLEME'] = df["ICD10 1'İNCİ SEVİYE GRUP ADI"].map(icd_dict, na_action='ignore')
+        df.loc[df["ICD10 1'İNCİ SEVİYE GRUP ADI"].notna() & df["MANUEL ICD DÜZENLEME"].isna(), "MANUEL ICD DÜZENLEME"] = 'ICD ÇALIŞILMAMIŞ'
         df['MANUEL ICD DÜZENLEME'].fillna('TÜRÜ BELİRTİLMEMİŞ', inplace=True)
         icd_loc = df.columns.get_loc("ICD10 1'İNCİ SEVİYE GRUP ADI") + 1
         df.insert(icd_loc, 'MANUEL ICD DÜZENLEME', df.pop('MANUEL ICD DÜZENLEME'))
