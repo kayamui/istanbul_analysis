@@ -186,3 +186,4 @@ departments/Electronic Data System/Gui Program/versions/ver1.4/unlock_code.py
 *.xlsx
 *.xls
 *.gif
+*.ipynb

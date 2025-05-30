@@ -7,6 +7,8 @@ import sys
 import traceback
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import simpledialog
+
 
 def get_base_dir():
     if getattr(sys, 'frozen', False):
@@ -62,8 +64,28 @@ def main():
         # Step 2: Processing
         gui.update_status("Dosya Dönüştürülüyor...")
 
+        reports_columns = ['İhbar/Çağrı Tarihi', 'İhbar/Çağrı  Saati', 'Nakledilen Hastane', 'Sevk Eden Hastane', 'Sevk Edilen Hastane', "ICD10 1'İNCİ SEVİYE GRUP ADI"]
+        reports_missing_columns= [col for col in reports_columns if col not in df.columns]
+        
+        non_existent_cols= []
+        for col in reports_missing_columns:
+            prompt_text = f"Sahadan Hastaneye Defter'de bulunamayan kolon: {col}, \nŞu an defterde mevcut olan kolon adını giriniz"
+
+            new_col = simpledialog.askstring("Hata", prompt_text)
+
+            if not new_col:
+                reports_columns.remove(col)
+                non_existent_cols.append(col)
+                continue
+            
+            df.rename(columns={new_col:col}, inplace=True)
+
+        if len(non_existent_cols) > 0:
+            messagebox.showwarning("Uyarı",f"Eksik kolonlar nedeniyle işlem tamamlanamadı: {', '.join(non_existent_cols)}")
+
         df['Tarih'] = pd.to_datetime(df['İhbar/Çağrı Tarihi'] + ' ' + df['İhbar/Çağrı  Saati'], format='%d-%m-%Y %H:%M:%S')
-        df['MANUEL ŞEF TARİHİ'] = df['Tarih'].apply(lambda x: (x.date() - dt.timedelta(days=1)) if 0 <= x.hour < 8 else x.date())
+        df['MANUEL ŞEF TARİHİ'] = df['Tarih'].apply(lambda x: ((x - dt.timedelta(days=1)).date() if 0 <= x.hour < 8 else x.date()).strftime('%d-%m-%Y'))
+
         chef_loc = df.columns.get_loc('İhbar/Çağrı Tarihi') - 1
         df.insert(chef_loc + 1, 'MANUEL ŞEF TARİHİ', df.pop('MANUEL ŞEF TARİHİ'))
 
@@ -98,7 +120,14 @@ def main():
 
         month = df['AY'].iloc[0]
         month_number = [k for k, v in month_dict.items() if v == month][0]
-        year = df["MANUEL ŞEF TARİHİ"].apply(lambda x: x.year).mode()[0]
+        for i in range(len(df.head())):
+            try:
+                year = df.iloc[i]["MANUEL ŞEF TARİHİ"].split('-')[-1]
+                if year:
+                    break
+            except:
+                pass
+
 
         os.makedirs(output_folder, exist_ok=True)
         output_file = os.path.join(output_folder, f'{month_number}-{month} {year} AVR ASOS TANI DÖNÜŞTÜRÜLMÜŞ DEFTER.xlsx')
