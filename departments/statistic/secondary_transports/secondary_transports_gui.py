@@ -719,9 +719,16 @@ class AmbulanceApp:
 
                         the_frame = pd.concat([the_frame, group_one])
 
-
-                    the_frame.rename(columns={'Hasta Adı_upper':'Hasta Adı', 'Hasta Soyadı_upper':'Hasta Soyadı', 'Hasta Ad Soyad_upper':'Hasta Ad Soyad'}, inplace=True)
-                    the_frame.insert(2,'Hasta Adı Hasta Soyadı', the_frame.pop('Hasta Ad Soyad'))
+                    the_frame.reset_index(inplace=True)
+                    the_frame.drop(columns='index', inplace=True)
+                    
+                    if the_frame.empty:
+                        messagebox.showerror("Uyarı", "Hiçbir Eşleşme Bulunamadı.")
+                        return
+                    
+                    the_frame.rename(columns={'Hasta Adı_upper':'Hasta Adı', 'Hasta Soyadı_upper':'Hasta Soyadı', 'Hasta Ad Soyad_upper':'Hasta Adı Hasta Soyadı'}, inplace=True)
+                        
+                    the_frame.insert(2,'Hasta Adı Hasta Soyadı', the_frame.pop('Hasta Adı Hasta Soyadı'))
 
                     the_frame.drop(columns='index', inplace=True)
 
