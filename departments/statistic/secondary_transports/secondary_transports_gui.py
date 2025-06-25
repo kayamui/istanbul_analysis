@@ -646,9 +646,15 @@ class AmbulanceApp:
                     df_reports['Tarih']= df_reports['Vaka Veriliş Tarih Saat']
                     df_placed['Tarih']= df_placed['Talep Tarihi']
 
-                    df_placed.drop(columns='index', inplace=True)
-                    df_reports.drop(columns='index', inplace=True)
-
+                    try:
+                        df_placed.drop(columns='index', inplace=True)
+                    except:
+                        pass
+                    try:
+                        df_reports.drop(columns='index', inplace=True)
+                    except:
+                        pass
+                    
                     df_placed.reset_index(inplace=True)
                     df_reports.reset_index(inplace=True)
 
@@ -720,7 +726,11 @@ class AmbulanceApp:
                         the_frame = pd.concat([the_frame, group_one])
 
                     the_frame.reset_index(inplace=True)
-                    the_frame.drop(columns='index', inplace=True)
+                    
+                    try:
+                        the_frame.drop(columns='index', inplace=True)
+                    except:
+                        pass
                     
                     if the_frame.empty:
                         messagebox.showerror("Uyarı", "Hiçbir Eşleşme Bulunamadı.")
@@ -730,11 +740,14 @@ class AmbulanceApp:
                         
                     the_frame.insert(2,'Hasta Adı Hasta Soyadı', the_frame.pop('Hasta Adı Hasta Soyadı'))
 
-                    the_frame.drop(columns='index', inplace=True)
-
                     the_frame.reset_index(drop=True, inplace=True)
-
-                    df_placed.drop(columns=['index','Hasta Adı_upper','Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane', 'Tarih', 'is_baby'], inplace=True)
+                    
+                    placed_columns_drop= ['index','Hasta Adı_upper','Hasta Soyadı_upper', 'Nakledilen-Nakil Talep Eden Hastane', 'Tarih', 'is_baby']
+                    for col in placed_columns_drop:
+                        try:
+                            df_placed.drop(columns=col, inplace=True)
+                        except:
+                            pass
 
                     columns= ['İhbar/Çağrı Tarihi İhbar/Çağrı  Saati', 'Hasta Adı Hasta Soyadı',
                             'MANUEL DÜZENLEME Nakledilen Hastane', 'ICD10 TANI KODU',
