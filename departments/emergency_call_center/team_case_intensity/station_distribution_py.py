@@ -3,6 +3,8 @@ from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field
 from copy import deepcopy
 
+import pandas as pd
+
 # Constants
 STATION_MAX_ROTATION_COUNT = 3
 MAX_ROTATIONS_COUNT_PER_PERSONNEL = 5
@@ -540,10 +542,27 @@ def main():
         print(f'Kapalı İstasyonlar: {len(result.closed_stations)}')
         print(f'Taşınan Personel: {result.personnel_moved}')
         print('\nİşlem Logları:')
+        open_station_names = [s.id for s in result.open_stations]
+        closed_station_names = [s.id for s in result.closed_stations]
+        logs = result.logs
+
+        max_len = max(len(open_station_names), len(closed_station_names), len(logs))
+
+        def pad(lst):
+            return lst + [''] * (max_len - len(lst))
+
+        result_excel = pd.DataFrame({
+            'Açılan İstasyonlar': pad(open_station_names),
+            'İşlem Logları': pad(logs),
+            'Kapalı İstasyonlar': pad(closed_station_names)
+        })
+
+        result_excel.to_excel('C:/Users/mkaya/Onedrive/Masaüstü/result.xlsx', index=False)
         for log in result.logs:
             print(f'- {log}')
-        print('\nSonuç JSON:')
-        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        
+        #print('\nSonuç JSON:')
+        #print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
     except Exception as e:
         print(f'Hata: Geçersiz JSON veya veri formatı: {e}')
 
