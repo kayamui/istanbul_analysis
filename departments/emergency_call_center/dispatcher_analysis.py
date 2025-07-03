@@ -11,12 +11,11 @@ import plotly.graph_objects as go
 
 path= 'case_reports/europe/'
 
-excel_jul= pd.ExcelFile(path+'2024/monthly/'+'7-TEMMUZ 2024 DEFTER.xlsx')
+excel_jul= pd.ExcelFile(r"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\2025\monthly\3- MART 2025 AVR ASOS TANI DÖNÜŞTÜRÜLMÜŞ DEFTER.xlsx")
 
 df9 = {sheet_name: excel_jul.parse(sheet_name) for sheet_name in excel_jul.sheet_names}
 
-dataframe= df9['55923 defter avrupa']
-
+dataframe= df9['MART 2025-29.153']
 
 
 dataframe['value']= 1

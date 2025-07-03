@@ -5,6 +5,8 @@ from copy import deepcopy
 
 import pandas as pd
 
+import logging
+
 # Constants
 STATION_MAX_ROTATION_COUNT = 3
 MAX_ROTATIONS_COUNT_PER_PERSONNEL = 5
@@ -334,8 +336,7 @@ class StationDistributor:
                                and role in s.get_missing_roles()]
             shortage_stations.sort(key=lambda s: s.importance, reverse=True)
             
-            
-            
+            # Start from most important stations
             for station in shortage_stations:
                 current_rotations = self.get_rotation_count_for_station(station)
                 if current_rotations >= station.max_rotation_count:
@@ -476,95 +477,35 @@ class StationDistributor:
 
 
 def main():
-    json_input = '''
-    {
-        "stations": [
-            {
-                "id": "BYR1",
-                "region": "Beyoğlu",
-                "importance": 5,
-                "assignedPersonnel": [
-                    {"id": "P001", "name": "Ahmet Yılmaz", "roles": ["medic"], "assignedFrom": "BYR1", "homeStationId": "BYR1", "negativeStations": ["BYR2"], "preferredStations": ["BYR1", "SIS1"], "rotationCount": 0},
-                    {"id": "P002", "name": "Mehmet Kaya", "roles": ["medic"], "assignedFrom": "BYR1", "homeStationId": "BYR1", "negativeStations": [], "preferredStations": ["BYR1", "BYR3"], "rotationCount": 1},
-                    {"id": "P003", "name": "Ali Demir", "roles": ["driver"], "assignedFrom": "BYR1", "homeStationId": "BYR1", "negativeStations": [], "preferredStations": [], "rotationCount": 0}
-                ],
-                "maxRotationCount": 2
-            },
-            {
-                "id": "BYR2",
-                "region": "Beyoğlu",
-                "importance": 3,
-                "assignedPersonnel": [
-                    {"id": "P004", "name": "Ayşe Öztürk", "roles": ["medic"], "assignedFrom": "BYR2", "homeStationId": "BYR2", "negativeStations": [], "preferredStations": ["BYR2", "FTH1"], "rotationCount": 0},
-                    {"id": "P005", "name": "Fatma Şahin", "roles": ["medic"], "assignedFrom": "BYR2", "homeStationId": "BYR2", "negativeStations": [], "preferredStations": ["BYR2"], "rotationCount": 2}
-                ],
-                "maxRotationCount": 3
-            },
-            {
-                "id": "SIS1",
-                "region": "Şişli",
-                "importance": 4,
-                "assignedPersonnel": [
-                    {"id": "P006", "name": "Mustafa Çelik", "roles": ["medic", "driver"], "assignedFrom": "SIS1", "homeStationId": "SIS1", "negativeStations": ["BYR2"], "preferredStations": ["SIS1", "SIS2"], "rotationCount": 1},
-                    {"id": "P007", "name": "Zeynep Yıldız", "roles": ["medic"], "assignedFrom": "SIS1", "homeStationId": "SIS1", "negativeStations": [], "preferredStations": ["SIS1", "BYR1"], "rotationCount": 0},
-                    {"id": "P008", "name": "Hasan Arslan", "roles": ["driver"], "assignedFrom": "SIS1", "homeStationId": "SIS1", "negativeStations": [], "preferredStations": [], "rotationCount": 3},
-                    {"id": "P009", "name": "Osman Kara", "roles": ["medic"], "assignedFrom": "SIS1", "homeStationId": "SIS1", "negativeStations": [], "preferredStations": ["SIS1", "FTH1"], "rotationCount": 0}
-                ],
-                "maxRotationCount": 4
-            },
-            {
-                "id": "FTH1",
-                "region": "Fatih",
-                "importance": 5,
-                "assignedPersonnel": [
-                    {"id": "P010", "name": "Emine Aydın", "roles": ["medic"], "assignedFrom": "FTH1", "homeStationId": "FTH1", "negativeStations": [], "preferredStations": ["FTH1"], "rotationCount": 1}
-                ],
-                "maxRotationCount": 2
-            }
-        ],
-        "neighboringRegions": {
-            "Beyoğlu": ["Şişli", "Fatih"],
-            "Şişli": ["Beyoğlu", "Kağıthane"],
-            "Fatih": ["Beyoğlu", "Zeytinburnu", "Eminönü"]
-        },
-        "maxRotationsPerPersonnel": 5
-    }
-    '''
+    with open('C:/Users/mkaya/Onedrive/Masaüstü/data.json', 'r', encoding= 'utf-8') as f:
+        data= json.load(f)
 
-    try:
-        with open('C:/Users/mkaya/Onedrive/Masaüstü/data.json', 'r', encoding= 'utf-8') as f:
-            data= json.load(f)
-        #data= json.loads(json_input)
-        distributor = StationDistributor.from_dict(data)
-        result = distributor.distribute_personnel()
+    distributor = StationDistributor.from_dict(data)
+    result = distributor.distribute_personnel()
 
-        print(f'Açık İstasyonlar: {len(result.open_stations)}')
-        print(f'Kapalı İstasyonlar: {len(result.closed_stations)}')
-        print(f'Taşınan Personel: {result.personnel_moved}')
-        print('\nİşlem Logları:')
-        open_station_names = [s.id for s in result.open_stations]
-        closed_station_names = [s.id for s in result.closed_stations]
-        logs = result.logs
+    print(f'Açık İstasyonlar: {len(result.open_stations)}')
+    print(f'Kapalı İstasyonlar: {len(result.closed_stations)}')
+    print(f'Taşınan Personel: {result.personnel_moved}')
+    print('\nİşlem Logları:')
+    open_station_names = [s.id for s in result.open_stations]
+    closed_station_names = [s.id for s in result.closed_stations]
+    logs = result.logs
 
-        max_len = max(len(open_station_names), len(closed_station_names), len(logs))
+    max_len = max(len(open_station_names), len(closed_station_names), len(logs))
 
-        def pad(lst):
-            return lst + [''] * (max_len - len(lst))
+    def pad(lst):
+        return lst + [''] * (max_len - len(lst))
 
-        result_excel = pd.DataFrame({
-            'Açılan İstasyonlar': pad(open_station_names),
-            'İşlem Logları': pad(logs),
-            'Kapalı İstasyonlar': pad(closed_station_names)
-        })
+    result_excel = pd.DataFrame({
+        'Açılan İstasyonlar': pad(open_station_names),
+        'İşlem Logları': pad(logs),
+        'Kapalı İstasyonlar': pad(closed_station_names)
+    })
 
-        result_excel.to_excel('C:/Users/mkaya/Onedrive/Masaüstü/result.xlsx', index=False)
-        for log in result.logs:
-            print(f'- {log}')
+    result_excel.to_excel('C:/Users/mkaya/Onedrive/Masaüstü/result.xlsx', index=False)
+    for log in result.logs:
+        print(f'- {log}')
         
-        #print('\nSonuç JSON:')
-        #print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
-    except Exception as e:
-        print(f'Hata: Geçersiz JSON veya veri formatı: {e}')
 
 
 if __name__ == "__main__":
