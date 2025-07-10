@@ -1,7 +1,6 @@
 # Istanbul EMS Analysis
 
-**Author**: Muhammed Kaya  
-**Team**: KodlaYaşat (Istanbul 112 Paramedic Developers)
+**Author**: Muhammed Kaya
 
 A comprehensive analytical toolkit designed to evaluate and optimize the performance of Istanbul's Emergency Medical Services (EMS). This project includes Python tools and Jupyter notebooks that analyze transport efficiency, GPS reactions, shift patterns, and case tracking — tailored specifically for the Istanbul 112 Ambulance Service.
 
