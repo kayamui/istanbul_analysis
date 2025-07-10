@@ -215,7 +215,6 @@ for dataframes in all_datas:
     df= pd.concat([df, dataframes[dataframe][necessary_columns]])
 
 
-
 def print_lonLat_columns(df):
     """Prints columns containing the substring 'enlem' (case-insensitive)."""
 
@@ -256,7 +255,8 @@ def get_district_neighbourhood(df):
   # Spatial join to find neighborhoods
   points_gdf = gpd.sjoin(points_gdf, neighbourhoods_gdf, how="left", predicate="within")
   points_gdf.rename(columns={"name": "Neighbourhood"}, inplace=True)
-
+  points_gdf['District']= points_gdf['District'].astype(str).str.strip()
+  
   # Select relevant columns and return
   return points_gdf[columns]
 
@@ -266,9 +266,10 @@ istanbul_population_density['Ilce']= istanbul_population_density['Ilce'].str.str
 istanbul_population_density= istanbul_population_density[['Ilce', 'Nüfus']]
 istanbul_population_density.rename(columns={'Nüfus':'District Population Density', 'Ilce':'District'}, inplace=True)
 
-df['District']= df['District'].str.strip()
+#df['District']= df['District'].str.strip()  
 
 istanbul_population_density_dict= istanbul_population_density.set_index('District').to_dict()['District Population Density']
+
 df['District Population Density']= df['District'].map(istanbul_population_density_dict)
 
 df['case_response_time'] = round((pd.to_datetime(df['Olay Yeri Varış Tarih Saat']) - pd.to_datetime(df['İhbar/Çağrı Tarih Saat'])).dt.total_seconds(), 2)  # Convert to seconds
@@ -305,6 +306,7 @@ df.fillna({'Nabız Değeri': np.nan}, inplace=True)
 df.fillna({'Glukoz':np.nan}, inplace=True)
 df.fillna({'SPO2':np.nan}, inplace=True)
 df.fillna({'Solunum Değeri':np.nan}, inplace=True)
+
 icd_scores['ICD10 TANI']= icd_scores['ICD10 TANI'].str.strip()
 icd_scores_dict= icd_scores.set_index('ICD10 TANI').to_dict()['Expanded Score']
 
@@ -670,7 +672,8 @@ for season in df['season'].unique():
             df_team_grouped['strategic_score_z']= robust_z_score(df_team_grouped['strategic_score'])
             total_score_mean= df_team_grouped['total_score'].mean()
             strategic_score_mean= df_team_grouped['strategic_score'].mean()
-            df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 'Expendable' if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 'Hardly Expendable' if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 'Non-Expendable', axis=1)
+            df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 0 if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 1 if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 2 if x['total_score_z'] < 1.5 and x['strategic_score_z'] < 0.5 else 3 if x['total_score_z'] < 2 and x['strategic_score_z'] < 1 else 4 if x['total_score_z'] < 2.5 and x['strategic_score_z'] < 1.5 else 5, axis=1)
+
             df_team_grouped= df_team_grouped.sort_values(by='total_score_z', ascending=False).reset_index()
 
             df_team_grouped.reset_index(drop=True).to_excel(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\overall\{season}_{day}_total scores.xlsx")
@@ -733,8 +736,8 @@ for season in df_last_year['season'].unique():
             df_team_grouped['strategic_score_z']= robust_z_score(df_team_grouped['strategic_score'])
             total_score_mean= df_team_grouped['total_score'].mean()
             strategic_score_mean= df_team_grouped['strategic_score'].mean()
-            df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 'Expendable' if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 'Hardly Expendable' if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 'Non-Expendable', axis=1)
-            df_team_grouped= df_team_grouped.sort_values(by='total_score_z', ascending=False).reset_index()
+            df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 0 if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 1 if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 2 if x['total_score_z'] < 1.5 and x['strategic_score_z'] < 0.5 else 3 if x['total_score_z'] < 2 and x['strategic_score_z'] < 1 else 4 if x['total_score_z'] < 2.5 and x['strategic_score_z'] < 1.5 else 5, axis=1)
+
 
             df_team_grouped.reset_index(drop=True).to_excel(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\last_year\{season}_{day}_total scores.xlsx")
             
@@ -792,7 +795,7 @@ df_team_grouped['total_score_z']= robust_z_score(df_team_grouped['total_score'])
 df_team_grouped['strategic_score_z']= robust_z_score(df_team_grouped['strategic_score'])
 total_score_mean= df_team_grouped['total_score'].mean()
 strategic_score_mean= df_team_grouped['strategic_score'].mean()
-df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 'Expendable' if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 'Hardly Expendable' if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 'Non-Expendable', axis=1)
+df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 0 if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 1 if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 2 if x['total_score_z'] < 1.5 and x['strategic_score_z'] < 0.5 else 3 if x['total_score_z'] < 2 and x['strategic_score_z'] < 1 else 4 if x['total_score_z'] < 2.5 and x['strategic_score_z'] < 1.5 else 5, axis=1)
 df_team_grouped= df_team_grouped.sort_values(by='total_score_z', ascending=False).reset_index()
 
 df_team_grouped.reset_index(drop=True).to_excel(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\last_year\1- GENERAL_last year_total scores.xlsx")
@@ -851,7 +854,7 @@ df_team_grouped['total_score_z']= robust_z_score(df_team_grouped['total_score'])
 df_team_grouped['strategic_score_z']= robust_z_score(df_team_grouped['strategic_score'])
 total_score_mean= df_team_grouped['total_score'].mean()
 strategic_score_mean= df_team_grouped['strategic_score'].mean()
-df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 'Expendable' if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 'Hardly Expendable' if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 'Non-Expendable', axis=1)
+df_team_grouped['station_expendable']= df_team_grouped.apply(lambda x: 0 if x['total_score_z'] < 0 and x['strategic_score_z'] < -1.5 else 1 if x['total_score_z'] < 1 and x['strategic_score_z'] < 0 else 2 if x['total_score_z'] < 1.5 and x['strategic_score_z'] < 0.5 else 3 if x['total_score_z'] < 2 and x['strategic_score_z'] < 1 else 4 if x['total_score_z'] < 2.5 and x['strategic_score_z'] < 1.5 else 5, axis=1)
 df_team_grouped= df_team_grouped.sort_values(by='total_score_z', ascending=False).reset_index()
 
 df_team_grouped.reset_index(drop=True).to_excel(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\overall\1- GENERAL_total scores.xlsx")            

@@ -270,19 +270,12 @@ class DataCreator:
     def create_source_data(self):
         
         data= self.get_json_data()
-        station_names= self.shift_list['İstasyon'].unique().tolist()
-        station_names= [name for name in station_names if pd.notna(name) and name != 'BAG5' and name != 'BKR6' and name != 'ESY4' and name != 'KÇK6' and name != 'SLV2' and name != 'ZTB3']
+        station_names= [name for name in self.shift_list['İstasyon'].unique().tolist() if pd.notna(name) and name != 'BAG5' and name != 'BKR6' and name != 'ESY4' and name != 'KÇK6' and name != 'SLV2' and name != 'ZTB3']
         
         for station_name in station_names:
             df_assignments = self.shift_list[self.shift_list['İstasyon'] == station_name].copy()
             
-            new_station = {
-                'id': '',
-                'region': '',
-                'importance': '',
-                'assignedPersonnel': [],
-                'maxRotationCount': 5
-            }
+            new_station = {}
             
             new_station['id'] = station_name
 
@@ -296,14 +289,10 @@ class DataCreator:
 
             # Get importance as float (fix here!)
             importance_series = self.scoring[self.scoring['Ekip No'] == station_name]['total_score_z'].astype('float32')
-            if importance_series.empty:
-                logging.warning(f"Importance for station {station_name} not found. Skipping assignment.")
-                continue
             
             new_station['importance'] = float(importance_series.iloc[0]) if not importance_series.empty else 0.0
-            if not isinstance(new_station['importance'], (int, float)):
-                logging.error(f"Importance for station {station_name} is not a number: {new_station['importance']}")
-                new_station['importance'] = 0.0
+            new_station['assignedPersonnel'] = []
+            new_station['maxRotationCount'] = 5
             
             logging.info(f"Processing station: {station_name}, Region: {new_station['region']}, Importance: {new_station['importance']}")
             
@@ -313,22 +302,17 @@ class DataCreator:
                 worker_id= df_assignments.iloc[i]['Kimlik No']
                 
                 new_personnel = {
-                    'id': '',
-                    'name': '',
-                    'roles': [''],
-                    'assignedFrom': '',
-                    'homeStationId': '',
-                    'negativeStations': [],
-                    'preferredStations': [],
-                    'rotationCount': 0
+                    'roles': [],  # Initialize roles with None
                 }
                 
                 if worker_id  not in added_worker_ids:
                     added_worker_ids.append(df_assignments.iloc[i]['Kimlik No'])
                     new_personnel['id'] = str(worker_id)
                     new_personnel['name'] = str(df_assignments.iloc[i]['İsim Soyisim'])
-                    new_personnel['roles'][0] = str(df_assignments.iloc[i]['roles'])
+                    new_personnel['roles'].append(str(df_assignments.iloc[i]['roles']))
                     new_personnel['homeStationId'] = str(df_assignments.iloc[i]['İstasyon'])
+                    new_personnel['negativeStations'] = []
+                    new_personnel['preferredStations'] = []
                     new_personnel['assignedFrom']= str(df_assignments.iloc[i]['İstasyon'])
                 else:
                     logging.warning(f"Worker id {worker_id} is already assigned in another station")

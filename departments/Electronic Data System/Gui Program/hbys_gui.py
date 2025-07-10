@@ -398,12 +398,6 @@ class App:
                 return minutes
             except:
                 return row
-            
-        #Generate Graphs
-        df = df_hastane_hbys_filtered[:-1]
-        fig = px.treemap(df, path=['Nakledilen Hastane'], values='Toplam Vaka',
-                        color='Onaylı Oranı', hover_data=['Nakledilen Hastane','Toplam Vaka'])
-        fig.write_html(directory_path + f'{now} HBYS Hastane onay Oranı.html')
 
         df_hastane_hbys_minutes_filtered= df_hastane_hbys.copy()
         df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi']= df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi'].astype(str)
@@ -411,12 +405,6 @@ class App:
         df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi Dk']= df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi'].apply(get_minutes)
         df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi Dk'] = df_hastane_hbys_minutes_filtered['Doktor Onaylama Süresi Dk'].astype(float)
         
-        #Generate Graphs
-        df = df_hastane_hbys_minutes_filtered[:-1]
-        fig = px.treemap(df, path=['Nakledilen Hastane'], values='Toplam Vaka',
-                        color='Doktor Onaylama Süresi Dk', hover_data=['Nakledilen Hastane','Toplam Vaka'])
-        fig.write_html(directory_path + f'{now} HBYS Hastane Doktor Onay Süresi.html')
-
         df_ekip_hbys_filtered= df_ekip_hbys[df_ekip_hbys['Tabletten Gönderilen']!= 0] 
         df_ekip_hbys_filtered['Hastanede Bulunma Süresi Dk']= df_ekip_hbys_filtered['Hastanede Bulunma Süresi'].astype(str).apply(get_minutes)
         df_ekip_hbys_filtered['Toplam Vaka']= df_ekip_hbys_filtered['Toplam Vaka'].astype(int)
@@ -424,19 +412,8 @@ class App:
         df_ekip_hbys_filtered['Hastaneden Ayrılış - Tabletten Gönderilme Tarihi Dk']= df_ekip_hbys_filtered['Hastaneden Ayrılış - Tabletten Gönderilme Tarihi'].astype(str).apply(get_minutes)
         df_ekip_hbys_filtered['Hastaneden Ayrılış - Tabletten Gönderilme Tarihi Dk']= df_ekip_hbys_filtered['Hastaneden Ayrılış - Tabletten Gönderilme Tarihi Dk'].astype(float)
 
-        #Generate Graphs
-        df = df_ekip_hbys_filtered[:-1]
-        fig = px.treemap(df, path=['Ekip No'], values='Toplam Vaka',
-                        color='Hastanede Bulunma Süresi Dk', hover_data=['Ekip No','Toplam Vaka'])
-        fig.write_html(directory_path + f'{now} HBYS Ekip Hastane Bekleme Süresi.html')
         
-        #Generate Graphs
-        df = df_ekip_hbys_filtered[:-1]
-        fig = px.treemap(df, path=['Ekip No'], values='Toplam Vaka',
-                        color='Hastaneden Ayrılış - Tabletten Gönderilme Tarihi Dk', hover_data=['Ekip No','Toplam Vaka','Hastaneden Ayrılış - Tabletten Gönderilme Tarihi'])
-        fig.write_html(directory_path + f'{now} HBYS Ekip Hastaneden Ayrılış Tabletten Gönderilme Farkı.html')
-        
-        messagebox.showinfo("Success", "Rapor ve Grafikler Başarıyla Oluşturuldu!")
+        messagebox.showinfo("Success", "Rapor Başarıyla Oluşturuldu!")
 
     def on_close(self):
         """Ensure the program fully exits when closed."""
