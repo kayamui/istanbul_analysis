@@ -19,38 +19,58 @@ RAW_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\cas
 OVERALL_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\overall"
 LAST_YEAR_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\last_year"
 
-POPULATION_DENSITY_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\population_density\istanbul_population_density.csv"
-DISTRICTS_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\districts_data\istanbul_districts.geojson"
-NEIGHBOURHOODS_GDF_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\neighbourhoods_data\istanbul_neighbourhoods.geojson"
+POPULATION_DENSITY_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\populations\istanbul_population_density.csv"
+DISTRICTS_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\locations\istanbul-districts.json"
+NEIGHBOURHOODS_GDF_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\locations\istanbul_neighbourhoods.geojson"
 
-ICD_DIAGNOSES_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\icd_diagnoses\icd_diagnoses.csv"
+ICD_DIAGNOSES_PATH= rf"C:\Users\mkaya\OneDrive\Belgeler\GitHub\istanbul_analysis\ipynb_workouts\icd10_diagnoses_scored.csv"
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class DataCreator:
     
-    def __init__(self, path):
+    def __init__(self, path, districts_data, neighbourhoods_gdf):
+        
+        self.districts_data= districts_data
+        self.neighbourhoods_gdf= neighbourhoods_gdf
         self.path= path
+        
         self.df= pd.DataFrame()
+        self.df= pd.DataFrame()
+        self.region= None
         
     def read_files(self):
-        case_files= [file for file in os.listdir(self.path) if file.endswith('.parquet')]
+        case_files= list(set([file for file in os.listdir(self.path) if file.endswith('.parquet')]))
+        
+        if case_files.empty:
+            raise ValueError("No parquet files found in the specified directory!")
         
         for file in case_files:
             file_path= os.path.join(self.path, file)
             logging.info(f"Reading file: {file_path}")
             df= pd.read_parquet(file_path)
-            
-            df= self.assign_region(df)
+            logging.info(f"==================================================\nFile {file} read successfully with shape {df.shape}\n==================================================")
+            df= self.get_district_neighbourhood(df)
+            logging.info(f"==================================================\nFile {file} region assigned successfully with shape {df.shape}\n==================================================")
             df= self.convert_columns(df)
+            logging.info(f"==================================================\nFile {file} columns converted successfully with shape {df.shape}\n==================================================")
             df= self.necessary_columns(df)
+            logging.info(f"==================================================\nFile {file} necessary columns assigned successfully with shape {df.shape}\n==================================================")
+            
+            logging.info(f"File {file} processed and necessary columns assigned.")
 
             self.df= pd.concat([self.df, df], ignore_index=True)
             
+            logging.info(f"==================================================\nThe shape of dataframe is {self.df.shape}\n==================================================")
+        
+        self.df= self.assign_region()
+        logging.info("Regions assigned successfully.")
+    
         return self.df
     
-    def assign_region(self, df):
+    def assign_region(self):
         """Assigns a region based on the key."""
-        team_codes = [
+        
+        eu_team_codes= [
             'ARN',
             'AVC',
             'BAG',
@@ -76,18 +96,146 @@ class DataCreator:
             'SRY',
             'STG',
             'ŞİŞ',
-            'ZTB'
-            # Add other regions as needed
+            'ZTB',
         ]
-        non_included_codes = ['KÇK6', 'ESY4','BAG5','ZTB3', 'FTH5','BKR6', 'STG7B', 'SLV2']
-        df= df[~df['Ekip No'].isin(non_included_codes)]
-        df['Ekip No']= df['Ekip No'].apply(lambda x: x[:3] if isinstance(x, str) and len(x) >= 3 and x else 'Unknown').map(
-            lambda x: x if x in team_codes else 'Unknown'
-        )
-        df= self.df[df['Ekip No'] != 'Unknown']
-        logging.info(f"Regions assigned based on team codes: {team_codes}")
         
-        return df
+        asia_team_codes= [
+            'ATŞ',
+            'BYZ',
+            'KDY',
+            'KRL',
+            'MLT',
+            'PND',
+            'PDN',
+            'SNC',
+            'SBY',
+            'TZL',
+            'ÇKY',
+            'ÜMR',
+            'ÜSK',
+            'ŞLE'
+        ]
+        
+        not_assigned_regions= [
+            'MTR',
+            'ADL',
+        ]
+        
+        non_included_codes = ['KÇK6', 'ESY4','BAG5','ZTB3', 'FTH5','BKR6', 'STG7B', 'SLV2']
+        logging.info(f"non_included team codes excluded new shape of self.df is {self.df.shape}")
+        
+        if self.df[self.df['Ekip No'].apply(lambda x: x[:3] in eu_team_codes)].shape[0] > self.df[self.df['Ekip No'].apply(lambda x: x[:3] in asia_team_codes)].shape[0] * 9:
+            team_codes= eu_team_codes
+            logging.warning("More than %90 of cases are from Europe, setting region to Europe!")
+            self.region= 'Europe'
+        
+        elif self.df[self.df['Ekip No'].apply(lambda x: x[:3] in asia_team_codes)].shape[0] > self.df[self.df['Ekip No'].apply(lambda x: x[:3] in eu_team_codes)].shape[0] * 9:
+            team_codes= asia_team_codes
+            logging.warning("More than %90 of cases are from Asia, setting region to Asia!")
+            self.region= 'Asia'
+        else:
+            logging.warning("No specific region found, setting region to Both!")
+            self.region= 'Both'
+            team_codes= eu_team_codes + asia_team_codes
+            
+        self.df['Ekip No']= self.df['Ekip No'].apply(lambda x: x if isinstance(x, str) and x[:3] not in not_assigned_regions and x not in non_included_codes and len(x) >= 3 and x else 'Unknown').map(
+            lambda x: x if x[:3] in team_codes else 'Unknown'
+        )
+        
+        self.df= self.df[self.df['Ekip No'] != 'Unknown']
+        
+        logging.info(f"=============================================================\n\n\nUnknown stations excluded, new shape of self.df is {self.df.shape}")
+        logging.info(f"Regions assigned based on team codes: {team_codes}\n")
+        logging.info(f"regions existing in self.df is {self.df['Ekip No'].unique()}\n=============================================================\n\n\n")
+        
+        return self.df
+
+    def get_district_neighbourhood(self, df):
+
+        districts_gdf = gpd.GeoDataFrame.from_features(self.districts_data["features"])
+        
+        lat = "Vakanın Enlemi" if "Vakanın Enlemi" in df.columns else str(input('latitude column: '))
+        lon = "Vakanın Boylamı" if "Vakanın Boylamı" in df.columns else str(input('longitude column: '))
+        
+        columns= [col for col in df.columns] + ['Neighbourhood', 'District']
+        # Load neighborhoods
+        # Convert latitude and longitude columns to numeric, coercing errors to NaN
+        df[lat] = pd.to_numeric(df[lat], errors='coerce')
+        df[lon] = pd.to_numeric(df[lon], errors='coerce')
+        
+        df_cleaned = df
+        # Convert Vakanın Enlemi and Vakanın Boylamı to geometry points
+        df_cleaned["geometry"] = df_cleaned.apply(lambda row: Point(row[lon], row[lat]), axis=1)
+        points_gdf = gpd.GeoDataFrame(df_cleaned, geometry="geometry", crs="EPSG:4326")
+
+        # Spatial join to find districts
+        points_gdf = gpd.sjoin(points_gdf, districts_gdf, how="left", predicate="within")
+        points_gdf.rename(columns={"name": "District"}, inplace=True)
+
+        # Drop 'index_right' before the second spatial join
+        if 'index_right' in points_gdf.columns:
+            points_gdf = points_gdf.drop(columns=['index_right'])
+
+        # Spatial join to find neighborhoods
+        points_gdf = gpd.sjoin(points_gdf, self.neighbourhoods_gdf, how="left", predicate="within")
+        points_gdf.rename(columns={"name": "Neighbourhood"}, inplace=True)
+        points_gdf['District']= points_gdf['District'].astype(str).str.strip()
+        
+        # Select relevant columns and return
+        logging.info(f"\n\n==================================================\nShape of points_gdf: {points_gdf.shape}\n\n==================================================")
+        return points_gdf[columns]
+    
+    def get_districts(self):
+        """Returns a list of European side districts."""
+        european_side_districts= [
+            'Arnavutköy',
+            'Avcılar',
+            'Bağcılar',
+            'Bahçelievler',
+            'Bakırköy',
+            'Bayrampaşa',
+            'Başakşehir',
+            'Beylikdüzü',
+            'Beyoğlu',
+            'Beşiktaş',
+            'Büyükçekmece',
+            'Çatalca',
+            'Esenler',
+            'Esenyurt',
+            'Eyüpsultan',
+            'Fatih',
+            'Gaziosmanpaşa',
+            'Güngören',
+            'Kağıthane',
+            'Küçükçekmece',
+            'Sarıyer',
+            'Silivri',
+            'Sultangazi',
+            'Zeytinburnu',
+            'Şişli']
+        
+        asian_side_districts= [
+            'Adalar',
+            'Ataşehir',
+            'Beykoz',
+            'Çekmeköy',
+            'Kadıköy',
+            'Kartal',
+            'Maltepe',
+            'Pendik',
+            'Sancaktepe',
+            'Sultanbeyli',
+            'Tuzla',
+            'Ümraniye',
+            'Üsküdar'
+            ]
+        if self.region == 'Europe':
+            european_side_districts= [district.upper() for district in european_side_districts]
+            return self.df[self.df['District'].isin(european_side_districts)]
+        elif self.region == 'Asia':
+            return self.df[self.df['District'].isin(asian_side_districts)]
+        else:
+            return self.df[self.df['District'].isin(european_side_districts + asian_side_districts)]
     
     def convert_columns(self,df):
         for col in df.columns:
@@ -97,20 +245,26 @@ class DataCreator:
                 df.rename(columns={'ICD10 TANI \nADI':'ICD10 TANI\nADI'}, inplace=True)
             if col=='Vaka Veriliş':
                 df.rename(columns={'Vaka Veriliş':'Vaka Veriliş Tarih Saat'}, inplace=True)
+                df['Vaka Veriliş Tarih Saat'] = pd.to_datetime(df['Vaka Veriliş Tarih Saat'], format='mixed', errors='coerce')
             if col == 'Ulaşım Sn':
                 df.rename(columns={'Ulaşım Sn':'Ulaşım Sn\n(Olay Yeri Varış Tarihi - Çağrı Tarihi)'}, inplace=True)
             if col == 'İhbar Tarihi':
                 df.rename(columns={'İhbar Tarihi':'İhbar/Çağrı Tarih Saat'}, inplace=True)
+                df['İhbar/Çağrı Tarih Saat'] = pd.to_datetime(df['İhbar/Çağrı Tarih Saat'], format='mixed', errors='coerce')
             if col == 'Olay Yeri Varış':
                 df.rename(columns={'Olay Yeri Varış':'Olay Yeri Varış Tarih Saat'}, inplace=True)
+                df['Olay Yeri Varış Tarih Saat'] = pd.to_datetime(df['Olay Yeri Varış Tarih Saat'], format='mixed', errors='coerce')
             if col == 'Olay Yeri Ayrılış':
                 df.rename(columns={'Olay Yeri Ayrılış':'Olay Yeri Ayrılış Tarih Saat'}, inplace=True)
             if col == 'Hastaneye Varış':
                 df.rename(columns={'Hastaneye Varış':'Hastaneye Varış Tarih Saat'}, inplace=True)
+                df['Hastaneye Varış Tarih Saat'] = pd.to_datetime(df['Hastaneye Varış Tarih Saat'], format='mixed', errors='coerce')
             if col == 'Hastaneden Ayrılış':
                 df.rename(columns={'Hastaneden Ayrılış':'Hastaneden Ayrılış Tarih Saat'}, inplace=True)
+                df['Hastaneden Ayrılış Tarih Saat'] = pd.to_datetime(df['Hastaneden Ayrılış Tarih Saat'], format='mixed', errors='coerce')
             if col == 'İstasyona Dönüş':
                 df.rename(columns={'İstasyona Dönüş':'İstasyona Dönüş Tarih Saat'}, inplace=True)
+                df['İstasyona Dönüş Tarih Saat'] = pd.to_datetime(df['İstasyona Dönüş Tarih Saat'], format='mixed', errors='coerce')
                 
             # Rename column if necessary
             if "Hastaneye Varış Saati\n" in df.columns:
@@ -118,7 +272,7 @@ class DataCreator:
 
             # Process 'İhbar/Çağrı Tarih Saat' or create it if needed
             if "İhbar/Çağrı Tarih Saat" not in df.columns:
-                logging.warning(f"Creating İhbar/Çağrı Tarih Saat")
+                logging.info(f"Creating İhbar/Çağrı Tarih Saat")
                 # First, apply the parse_date function to the original date column
                 if 'İhbar/Çağrı Tarihi' in df.columns and 'İhbar/Çağrı  Saati' in df.columns:
 
@@ -130,10 +284,10 @@ class DataCreator:
                         format='mixed'
                     )
                 else:
-                    logging.info(f"Warning: 'İhbar/Çağrı Tarihi' or 'İhbar/Çağrı  Saati' not found. Cannot create 'İhbar/Çağrı Tarih Saat'.")
+                    logging.warning(f"Warning: 'İhbar/Çağrı Tarihi' or 'İhbar/Çağrı  Saati' not found. Cannot create 'İhbar/Çağrı Tarih Saat'.")
             else:
                 # If 'İhbar/Çağrı Tarih Saat' already exists, ensure it's in datetime format
-                logging.info(f"Converting İhbar/Çağrı Tarih Saat to datetime for df")
+                #logging.info(f"Converting İhbar/Çağrı Tarih Saat to datetime for df")
                 df['İhbar/Çağrı Tarih Saat'] = pd.to_datetime(df['İhbar/Çağrı Tarih Saat'], format= 'mixed')
 
 
@@ -149,7 +303,7 @@ class DataCreator:
                 else:
                     logging.warning(f"Warning: 'Vaka Veriliş\\nTarihi' or 'Vaka Veriliş\\nSaati' not found. Cannot create 'Vaka Veriliş Tarih Saat'.")
             else:
-                logging.info(f"Converting Vaka Veriliş Tarih Saat to datetime for df")
+                #logging.info(f"Converting Vaka Veriliş Tarih Saat to datetime for df")
                 df['Vaka Veriliş Tarih Saat'] = pd.to_datetime(df['Vaka Veriliş Tarih Saat'], format= 'mixed')
 
 
@@ -165,7 +319,7 @@ class DataCreator:
                 else:
                     logging.warning(f"Warning: 'Olay Yeri Varış Tarihi' or 'Olay Yeri Varış Saati' not found. Cannot create 'Olay Yeri Varış Tarih Saat'.")
             else:
-                logging.info(f"Converting Olay Yeri Varış Tarih Saat to datetime for df")
+                #logging.info(f"Converting Olay Yeri Varış Tarih Saat to datetime for df")
                 df['Olay Yeri Varış Tarih Saat'] = pd.to_datetime(df['Olay Yeri Varış Tarih Saat'], format='mixed')
 
             # Process 'Olay Yeri Ayrılış Tarih Saat'
@@ -180,7 +334,7 @@ class DataCreator:
                 else:
                     logging.warning(f"Warning: 'Olay Yeri Ayrılış Tarihi' or 'Olay Yeri Ayrılış Saati' not found. Cannot create 'Olay Yeri Ayrılış Tarih Saat'.")
             else:
-                logging.info(f"Converting Olay Yeri Ayrılış Tarih Saat to datetime")
+                #logging.info(f"Converting Olay Yeri Ayrılış Tarih Saat to datetime")
                 df['Olay Yeri Ayrılış Tarih Saat'] = pd.to_datetime(df['Olay Yeri Ayrılış Tarih Saat'], format= 'mixed')
 
             # Process 'Hastaneye Varış Tarih Saat'
@@ -199,7 +353,7 @@ class DataCreator:
                 else:
                     logging.warning(f"Warning: 'Hastaneye Varış Tarihi' or 'Hastaneye Varış Saati' not found. Cannot create 'Hastaneye Varış Tarih Saat'.")
             else:
-                logging.info(f"Converting Hastaneye Varış Tarih Saat to datetime")
+                #logging.info(f"Converting Hastaneye Varış Tarih Saat to datetime")
                 df['Hastaneye Varış Tarih Saat'] = pd.to_datetime(df['Hastaneye Varış Tarih Saat'], format='mixed')
 
             # Process 'Hastaneden Ayrılış Tarih Saat'
@@ -214,7 +368,7 @@ class DataCreator:
                 else:
                     logging.warning(f"Warning: 'Hastaneden Ayrılış Tarihi' or 'Hastaneden Ayrılış Saati' not found. Cannot create 'Hastaneden Ayrılış Tarih Saat'.")
             else:
-                logging.info(f"Converting Hastaneden Ayrılış Tarih Saat to datetime for df")
+                #logging.info(f"Converting Hastaneden Ayrılış Tarih Saat to datetime for df")
                 df['Hastaneden Ayrılış Tarih Saat'] = pd.to_datetime(df['Hastaneden Ayrılış Tarih Saat'], format='mixed')
             
         return df
@@ -259,123 +413,17 @@ class DataCreator:
         for col in columns_to_be_added:
             df[col]= np.nan
         
-        return df[necessary_columns]
-    
-    def create_data(self):
-        
-        self.df= self.read_files()
-        self.df= self.convert_columns(self.df)
-        self.df= self.assign_region(self.df)
-        self.df= self.necessary_columns(self.df)
-        
-        return self.df
+        return df
     
 
 class DataConverter:
-    def __init__(self, population_density, icd_diagnoses, df, districts_data, neighbourhoods_gdf):
+    def __init__(self, population_density, icd_diagnoses, df):
         self.population_density = population_density
         self.icd_diagnoses = icd_diagnoses
         self.df = df
         self.districts_data = districts_data
         self.neighbourhoods_gdf = neighbourhoods_gdf
 
-
-    def print_lonLat_columns(self):
-        """Prints columns containing the substring 'enlem' (case-insensitive)."""
-
-        for col in self.df.columns:
-            if ('enlem' in col.lower()) | ('boylam' in col.lower()) | (col.lower() == 'lat') | (col.lower() == 'lon'):
-                logging.info(f"Lon/Lat Column: {col} found in self.df")
-
-
-    def get_district_neighbourhood(self):
-
-        districts_gdf = gpd.GeoDataFrame.from_features(self.districts_data["features"])
-        self.print_lonLat_columns()
-        
-        lat = "Vakanın Enlemi" if "Vakanın Enlemi" in self.df.columns else str(input('latitude column: '))
-        lon = "Vakanın Boylamı" if "Vakanın Boylamı" in self.df.columns else str(input('longitude column: '))
-        
-        columns= [col for col in self.df.columns] + ['Neighbourhood', 'District']
-        # Load neighborhoods
-
-        # Convert latitude and longitude columns to numeric, coercing errors to NaN
-        self.df[lat] = pd.to_numeric(self.df[lat], errors='coerce')
-        self.df[lon] = pd.to_numeric(self.df[lon], errors='coerce')
-        
-        df_cleaned = self.df
-        # Convert Vakanın Enlemi and Vakanın Boylamı to geometry points
-        df_cleaned["geometry"] = df_cleaned.apply(lambda row: Point(row[lon], row[lat]), axis=1)
-        points_gdf = gpd.GeoDataFrame(df_cleaned, geometry="geometry", crs="EPSG:4326")
-
-        # Spatial join to find districts
-        points_gdf = gpd.sjoin(points_gdf, districts_gdf, how="left", predicate="within")
-        points_gdf.rename(columns={"name": "District"}, inplace=True)
-
-        # Drop 'index_right' before the second spatial join
-        if 'index_right' in points_gdf.columns:
-            points_gdf = points_gdf.drop(columns=['index_right'])
-
-        # Spatial join to find neighborhoods
-        points_gdf = gpd.sjoin(points_gdf, self.neighbourhoods_gdf, how="left", predicate="within")
-        points_gdf.rename(columns={"name": "Neighbourhood"}, inplace=True)
-        points_gdf['District']= points_gdf['District'].astype(str).str.strip()
-        
-        # Select relevant columns and return
-        return points_gdf[columns]
-    
-    def get_eu_districts(self):
-        """Returns a list of European side districts."""
-        european_side_districts= [
-            'Arnavutköy',
-            'Avcılar',
-            'Bağcılar',
-            'Bahçelievler',
-            'Bakırköy',
-            'Bayrampaşa',
-            'Başakşehir',
-            'Beylikdüzü',
-            'Beyoğlu',
-            'Beşiktaş',
-            'Büyükçekmece',
-            'Çatalca',
-            'Çekmeköy',
-            'Esenler',
-            'Esenyurt',
-            'Eyüpsultan',
-            'Fatih',
-            'Gaziosmanpaşa',
-            'Güngören',
-            'Kağıthane',
-            'Küçükçekmece',
-            'Sarıyer',
-            'Silivri',
-            'Sultangazi',
-            'Zeytinburnu',
-            'Şişli'
-            ]
-        
-        return self.df[self.df['District'].isin(european_side_districts)]
-    
-    def get_asian_districts(self):
-        """Returns a list of Asian side districts."""
-        asian_side_districts= [
-            'Adalar',
-            'Ataşehir',
-            'Beykoz',
-            'Çekmeköy',
-            'Kadıköy',
-            'Kartal',
-            'Maltepe',
-            'Pendik',
-            'Sancaktepe',
-            'Sultanbeyli',
-            'Tuzla',
-            'Ümraniye',
-            'Üsküdar'
-        ]
-        
-        return self.df[self.df['District'].isin(asian_side_districts)]
     
     def create_population_dict(self):
         
@@ -394,8 +442,19 @@ class DataConverter:
         return icd_scores_dict
     
     def convert_dataframe(self):
-
-        self.df['Yaş']= self.df['Yaş'].str.replace('-', '')
+        """Converts columns to appropriate data types and handles errors."""
+        if 'Yaş' not in self.df.columns:
+            logging.error("Yaş column not found in the DataFrame.")
+            raise KeyError("Yaş column not found in the DataFrame.")
+        elif self.df['Yaş'].isnull().all():
+            logging.warning("Yaş column is empty or contains only NaN values.")
+        
+        else:
+            logging.info("Yaş column found in the DataFrame.")
+        try:
+            self.df['Yaş']= self.df['Yaş'].astype(str).str.replace('-', '')
+        except Exception as e:
+            logging.error(f"Error converting Yaş column: {e}")
 
         self.df['Ateş']= self.df['Ateş'].apply(lambda x: float(x) if isinstance(x, str) and x.replace('.', '', 1).isdigit() else np.nan)
         self.df['Yaş']= self.df['Yaş'].apply(lambda x: int(x) if isinstance(x, str) and x.isdigit() else np.nan)
@@ -427,48 +486,78 @@ class DataConverter:
     
     def create_columns(self):
         
+        icd_dict= self.create_icd_dict()
         self.df['case_count']= 1
+        self.df['District Population Density']= self.df['District'].map(self.create_population_dict())
         self.df['case_count_percentage']= self.df.groupby('District')['case_count'].transform(lambda x: x / x.sum() * 100)
         
-        self.df['District Population Density']= self.df['District'].map(self.create_population_dict())
         self.df['teams_population_density']= self.df['District Population Density'] / 100 * self.df['case_count_percentage']
         
-        self.df['icd_score']= self.df['ICD10 TANI\nADI'].map(self.create_icd_dict())
+        self.df['icd_score']= self.df['ICD10 TANI\nADI'].map(icd_dict)
     
         self.df['case_response_time'] = round((pd.to_datetime(self.df['Olay Yeri Varış Tarih Saat']) - pd.to_datetime(self.df['İhbar/Çağrı Tarih Saat'])).dt.total_seconds(), 2)  # Convert to seconds
 
         self.df['total_distance'] = self.df["Dönüş KM"].astype(float) - self.df['Çıkış KM'].astype(float)
-        self.df['field_operation_time'] = round((pd.to_datetime(self.df['Olay Yeri Ayrılış Tarih Saat']) - pd.to_datetime(self.df['İhbar/Çağrı Tarih Saat'])).dt.total_seconds(), 2)  # Convert to seconds
+        self.df['field_operation_time'] = round((pd.to_datetime(self.df['Olay Yeri Ayrılış Tarih Saat']) - pd.to_datetime(self.df['İhbar/Çağrı Tarih Saat'])).dt.total_seconds(), 2)        # Convert to seconds
         self.df['hospital_delivery_time'] = round((pd.to_datetime(self.df['Hastaneye Varış Tarih Saat']) - pd.to_datetime(self.df['Olay Yeri Ayrılış Tarih Saat'])).dt.total_seconds(), 2)  # Convert to seconds
-        self.df['season'], self.df['day'] = zip(*self.df['İhbar/Çağrı Tarih Saat'].apply(self.get_day_name_and_season()))
         
+        if 'İhbar/Çağrı Tarih Saat' not in self.df.columns:
+            logging.error("İhbar/Çağrı Tarih Saat column not found in the DataFrame.")
+            raise KeyError("İhbar/Çağrı Tarih Saat column not found in the DataFrame.")
+        else:
+            logging.info("İhbar/Çağrı Tarih Saat column found in the DataFrame.")
+        
+        try:
+            results = list(self.df['İhbar/Çağrı Tarih Saat'].apply(self.get_day_name_and_season))
+            if results:
+                self.df['season'], self.df['day'] = zip(*results)
+            else:
+                logging.warning("No results returned from get_day_name_and_season")
+                self.df['season'] = 'Unknown'
+                self.df['day'] = 'Unknown'
+        except ValueError as e:
+            logging.error(f"Error unpacking results: {e}")
+            self.df['season'] = 'Unknown'
+            self.df['day'] = 'Unknown'
+        
+        return self.df
+    
     def get_day_name_and_season(self,date):
+        
         """
         Returns the current day name and season name.
         Day name is in uppercase (e.g., 'MONDAY').
         Season name is capitalized (e.g., 'Summer').
         """
-        date= pd.to_datetime(date, format='mixed')
-        
-        # Get day name
-        day_name = date.strftime('%A') # e.g., 'WEDNESDAY'
+        try:
+            date = pd.to_datetime(date, format='mixed')
+            
+            # Get day name
+            day_name = date.strftime('%A')  # e.g., 'WEDNESDAY'
 
-        # Get season name
-        def get_season(date):
-            Y = date.year
-            seasons = [
-                ('Winter', dt.datetime(Y, 1, 1), dt.datetime(Y, 3, 21)),
-                ('Spring', dt.datetime(Y, 3, 21), dt.datetime(Y, 6, 21)),
-                ('Summer', dt.datetime(Y, 6, 21), dt.datetime(Y, 9, 23)),
-                ('Autumn', dt.datetime(Y, 9, 23), dt.datetime(Y, 12, 21)),
-                ('Winter', dt.datetime(Y, 12, 21), dt.datetime(Y+1, 1, 1))
-            ]
-            for season, start, end in seasons:
-                if start <= date <= end:
-                    return season
-            return 'UNKNOWN'
-        season_name = get_season(date)
-        return season_name, day_name
+            # Get season name
+            def get_season(date):
+                Y = date.year
+                seasons = [
+                    ('Winter', dt.datetime(Y, 1, 1), dt.datetime(Y, 3, 21)),
+                    ('Spring', dt.datetime(Y, 3, 21), dt.datetime(Y, 6, 21)),
+                    ('Summer', dt.datetime(Y, 6, 21), dt.datetime(Y, 9, 23)),
+                    ('Autumn', dt.datetime(Y, 9, 23), dt.datetime(Y, 12, 21)),
+                    ('Winter', dt.datetime(Y, 12, 21), dt.datetime(Y+1, 1, 1))
+                ]
+                for season, start, end in seasons:
+                    if start <= date <= end:
+                        return season
+                return 'Unknown'  # Fallback if no season is found
+            
+            season_name = get_season(date)
+            
+            return season_name, day_name
+        
+        except Exception as e:
+            # Return default values if there's any error
+            logging.warning(f"Error processing date {date}: {e}")
+            return 'Unknown', 'Unknown'
     
     def get_chief_day(self, date):
         
@@ -484,40 +573,43 @@ class DataConverter:
         """
         Returns the mean daily case count for each team.
         """
-        daily_mean_case_counts= self.get_daily_counts().groupby('Ekip No')['daily_case_count'].mean().rename('mean_daily_case_count')
-
-        return daily_mean_case_counts
+        self.daily_mean_case_counts= self.get_daily_counts().groupby('Ekip No')['daily_case_count'].mean().rename('mean_daily_case_count')
+        
+        return self.daily_mean_case_counts
     
     def team_population_densities(self):
         
         df_district_case_counts =self.df.groupby(['District', 'Ekip No']).agg({'case_count':'sum', 'District Population Density':'mean'}).reset_index().sort_values(by=['District', 'case_count'], ascending=[True, False])
         df_district_case_counts['case_count_percentage'] = df_district_case_counts.groupby('District')['case_count'].transform(lambda x: x / x.sum() * 100)
         df_district_case_counts['teams_population_density'] = df_district_case_counts['District Population Density'] / 100 * df_district_case_counts['case_count_percentage']
-        team_population_densities= df_district_case_counts.groupby(['Ekip No']).agg({'case_count': 'sum', 'teams_population_density': 'sum'}).reset_index().sort_values(by='teams_population_density', ascending=False)
+        self.team_population_densities= df_district_case_counts.groupby(['Ekip No']).agg({'case_count': 'sum', 'teams_population_density': 'sum'}).reset_index().sort_values(by='teams_population_density', ascending=False)
 
-        return team_population_densities
+        return self.team_population_densities
     
-    def get_team_population_density(self):
-        """
-        Returns the population density for each team.
-        """
+    """def get_team_population_density(self):
+        
+        #Returns the population density for each team.
+        
         team_population_density = self.df.groupby('Ekip No')['teams_population_density'].mean().rename('teams_population_density')
 
-        return team_population_density
+        return team_population_density"""
     
     def convert_data(self):
         
-        self.df= self.convert_dataframe()
-        self.df= self.get_district_neighbourhood()
         self.df= self.create_columns()
-        self.df['ihbar_date'] = pd.to_datetime(self.df['İhbar/Çağrı Tarih Saat']).dt.date
-        self.df['ihbar_date'] = self.get_chief_day(self.df['ihbar_date'])
+        self.df= self.convert_dataframe()
+        
+        #self.df['ihbar_date'] = pd.to_datetime(self.df['İhbar/Çağrı Tarih Saat']).dt.date
+        self.df['ihbar_date'] = self.get_chief_day(self.df['İhbar/Çağrı Tarih Saat'])
     
 class DataScorer:
-    def __init__(self, df, save_path):
+    def __init__(self, df, save_path, team_population_densities, mean_daily_case_counts):
         
         self.df = df
         self.save_path = save_path
+        
+        self.team_population_densities = team_population_densities
+        self.mean_daily_case_counts = mean_daily_case_counts
     
     def get_last_year(self):
         
@@ -527,7 +619,7 @@ class DataScorer:
         if self.save_path == LAST_YEAR_SAVE_PATH:
             last_year = self.df['ihbar_date'] >= (pd.to_datetime(self.df['ihbar_date'].max()) - pd.DateOffset(years=1)).date()
         
-            return last_year
+            return self.df[last_year]
         else:
             return self.df
     
@@ -677,14 +769,35 @@ class DataScorer:
         
     def cinsiyet_score(self, val):
         
-        return np.select([50,100], [val == 'KADIN', val == 'ERKEK'], default= 75)
+        if pd.isna(val):
+            return 75
+        if isinstance(val, str):
+            val = val.strip().upper()
+        if val not in ['KADIN', 'ERKEK']:
+            return 75
+        
+        if val == 'KADIN':
+            return 50
+        elif val == 'ERKEK':
+            return 100
+        else:
+            return 75  # Default score if not recognized
     
     def yenidogan_score(self, val):
         
-        return np.select([75], [val == 'Yeni Doğan'], default= 25)
-    
+        if pd.isna(val):
+            return 25
+        if val == 'Yeni Doğan':
+            return 100
+        else:
+            return 25
+        
     def adli_vaka_score(self, val):
-        return np.select([75], [val == 'Adli Vaka'], default= 25)
+        
+        if pd.isna(val):  
+            return 25
+        if val == 'Adli Vaka':
+            return 100
     
     def triage_score(self, val):
         
@@ -754,8 +867,8 @@ class DataScorer:
                         'icd_score': 'mean',
                     })
                     
-                    df_team_grouped = df_team_grouped.merge(converter.get_mean_daily_case_count(), left_index=True, right_index=True)
-                    df_team_grouped = df_team_grouped.merge(converter.team_population_densities(),  on='Ekip No', how='left', suffixes=('', '_team_density'))
+                    df_team_grouped = df_team_grouped.merge(self.mean_daily_case_counts, left_index=True, right_index=True)
+                    df_team_grouped = df_team_grouped.merge(self.team_population_densities,  on='Ekip No', how='left', suffixes=('', '_team_density'))
                     
                     for col in df_team_grouped.columns[1:]:
                         new_col = col + '_logarithmic_score'
@@ -793,24 +906,58 @@ class DataScorer:
     def datascorer(self):
         
         self.df= self.get_last_year()
+        logging.info("The shape of the DataFrame is: %s", self.df.shape)
         
-        self.df['cagri_nedeni_score'] = self.df['Çağrı Nedeni'].apply(self.cagri_score)
-        self.df['triaj_score'] = self.df['Triaj'].apply(self.triage_score)
-        self.df['yas_score'] = self.df['Yaş'].apply(self.age_score)
-        self.df['cinsiyet_score'] = self.df['Cinsiyet'].apply(self.cinsiyet_score)
-        self.df['yeni_dogan_score'] = self.df['Yeni Doğan'].apply(self.yenidogan_score)
-        self.df['adli_vaka_score'] = self.df['Adli Vaka'].apply(self.adli_vaka_score)
-        self.df['sonuc_score'] = self.df['Sonuç'].apply(self.sonuc_score)
-        self.df['bilinc_score'] = self.df['Bilinç'].apply(self.bilinç_score)
-        self.df['nabiz_score'] = self.df['Nabız'].apply(self.pulse_type_score)
-        self.df['tansiyon_score'] = self.df['Tansiyon'].apply(self.tansiyon_score)
-        self.df['glukoz_score'] = self.df['Glukoz'].apply(self.glukoz_score)
-        self.df['ates_score'] = self.df['Ateş'].apply(self.ates_score)
-        self.df['spo2_score'] = self.df['SPO2'].apply(self.spo2_score)
-        self.df['solunum_score'] = self.df['Solunum Değeri'].apply(self.solunum_score)
-        self.df['nabiz_deger_score'] = self.df['Nabız Değeri'].apply(self.nabiz_deg_score)
-        self.df['icd_score'] = self.df['ICD10 TANI\nADI'].apply(self.icd_score)
+        try:
+            logging.info("Calculating cagri nedeni score...")
+            self.df['cagri_nedeni_score'] = self.df['Çağrı Nedeni'].apply(self.cagri_score)
+            
+            logging.info("calculating triage score...")
+            self.df['triaj_score'] = self.df['Triaj'].apply(self.triage_score)
+            
+            logging.info("Calculating Yas score...")
+            self.df['yas_score'] = self.df['Yaş'].apply(self.age_score)
+            
+            logging.info(f"Calculating cinsiyet score...")
+            self.df['cinsiyet_score'] = self.df['Cinsiyet'].apply(self.cinsiyet_score)
+            
+            logging.info("Calculating yeni dogan score...")
+            self.df['yeni_dogan_score'] = self.df['Yeni Doğan'].apply(self.yenidogan_score)
+            
+            logging.info("Calculating adli vaka score...")
+            self.df['adli_vaka_score'] = self.df['Adli Vaka'].apply(self.adli_vaka_score)
+            
+            logging.info("Calculating sonuc score...")
+            self.df['sonuc_score'] = self.df['Sonuç'].apply(self.sonuc_score)
+            
+            logging.info("Calculating bilinc score...")
+            self.df['bilinc_score'] = self.df['Bilinç'].apply(self.bilinç_score)
+            
+            logging.info("Calculating nabiz score...")
+            self.df['nabiz_score'] = self.df['Nabız'].apply(self.pulse_type_score)
+            
+            logging.info("Calculating tansiyon score...")
+            self.df['tansiyon_score'] = self.df['Tansiyon'].apply(self.tansiyon_score)
+            
+            logging.info("Calculating glukoz score...")
+            self.df['glukoz_score'] = self.df['Glukoz'].apply(self.glukoz_score)
+            
+            logging.info("Calculating ates score...")
+            self.df['ates_score'] = self.df['Ateş'].apply(self.ates_score)
+            
+            logging.info("Calculating spo2 score...")
+            self.df['spo2_score'] = self.df['SPO2'].apply(self.spo2_score)
+            
+            logging.info("Calculating solunum degeri score...")
+            self.df['solunum_score'] = self.df['Solunum Değeri'].apply(self.solunum_score)
+            
+            logging.info("Calculating nabiz score...")
+            self.df['nabiz_deger_score'] = self.df['Nabız Değeri'].apply(self.nabiz_deg_score)
+            
         
+        except KeyError as e:
+            raise KeyError(f"KeyError: {e}. Please ensure all necessary columns are present in the DataFrame.")
+            
         self.score_data()
         logging.info(f"Data scoring completed and saved to {self.save_path}")
         
@@ -821,6 +968,27 @@ def main():
     # Initialize logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+    creator = DataCreator(RAW_DATA_PATH, districts_data, neighbourhoods_gdf)
+    data= creator.read_files()
+    
+    # Create DataConverter instance
+    converter = DataConverter(population_density, icd_diagnoses, data)
+
+    # Convert data
+    converter.convert_data()
+
+    team_population_densities = converter.team_population_densities()
+    logging.info(f"First 5 Team Population Densities:\n{team_population_densities.head(5)}")
+    mean_daily_case_counts = converter.get_mean_daily_case_count()
+    logging.info(f"First 5 Mean Daily Case Counts:\n{mean_daily_case_counts.head(5)}")
+    
+    # Create DataScorer instance
+    scorer = DataScorer(converter.df, OVERALL_SAVE_PATH,team_population_densities,  mean_daily_case_counts)
+
+    # Score data
+    scorer.datascorer()
+
+if __name__ == '__main__':
     # Load data
     population_density = pd.read_csv(POPULATION_DENSITY_PATH)
     icd_diagnoses = pd.read_csv(ICD_DIAGNOSES_PATH)
@@ -830,21 +998,5 @@ def main():
         districts_data = json.load(f)
     
     neighbourhoods_gdf = gpd.read_file(NEIGHBOURHOODS_GDF_PATH)
-
-    creator = DataCreator(RAW_DATA_PATH)
-    data= creator.create_data()
     
-    # Create DataConverter instance
-    converter = DataConverter(population_density, icd_diagnoses, data, districts_data, neighbourhoods_gdf)
-
-    # Convert data
-    converter.convert_data()
-
-    # Create DataScorer instance
-    scorer = DataScorer(converter.df, LAST_YEAR_SAVE_PATH)
-
-    # Score data
-    scorer.datascorer()
-
-if __name__ == '__main__':
     main()

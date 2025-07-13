@@ -12,5 +12,5 @@ def convert_excel_to_parquet(file_path):
         """)
     return f"{file_path}.parquet created successfully"
 
-file_path= r"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\2025\monthly\5-MAYIS 2025 AVR ASOS TANI DÖNÜŞTÜRÜLMÜŞ DEFTER.xlsx"
+file_path= r"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\asia\2024\total\2024 BİRLEŞTİRİLMİŞ PROTOKOL DEFTERİ.xlsx"
 convert_excel_to_parquet(file_path)
