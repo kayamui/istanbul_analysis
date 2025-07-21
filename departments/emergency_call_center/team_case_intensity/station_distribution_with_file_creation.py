@@ -854,8 +854,8 @@ def main():
 
 if __name__ == "__main__":
     
-    shift_list = pd.read_excel(rf"C:/Users/mkaya/Downloads/Personel-Nöbet-Listesi (34).xls", header=None)
-    df_signs = pd.read_excel(r"C:/Users/mkaya/Downloads/Personel-Imza-Defteri (11).xls", header=None)
+    shift_list = pd.read_excel(rf"C:\Users\mkaya\Downloads\Personel-Nöbet-Listesi (43).xls", header=None)
+    df_signs = pd.read_excel(r"C:\Users\mkaya\Downloads\Personel-Imza-Defteri (15).xls", header=None)
     scoring_file_name = DataCreator(None, None, None).get_scoring_file_name()
     logging.info(f"Scoring file name: {scoring_file_name}")
     
