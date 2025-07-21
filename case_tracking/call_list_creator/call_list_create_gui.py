@@ -216,7 +216,7 @@ class App:
 
         messagebox.showinfo('Dosyaları Bulundur', 'İhbar İşlemleri, Personel Nöbet Listesi,eu_team_code')
         
-        current_dir =os.path.abspath(os.getcwd())  #os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
+        current_dir ='C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/' #os.path.abspath(os.getcwd())  #os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
 
         shift_list_file= [x for x in os.listdir(current_dir) if 'Personel-Nöbet-Listesi' in x]
         
@@ -235,11 +235,11 @@ class App:
 
         # CREATE A NEW DIRECTORY
         directory_name = f"{now} Arama Listesi"
-        directory_path = current_dir + '\\' + directory_name + '\\'
+        directory_path = current_dir + '/' + directory_name + '/'
 
         # Use os.path.exists() to check if directory exists
-        if not os.path.exists(directory_name):
-            os.makedirs(current_dir + '\\' + directory_name)
+        if not os.path.exists(current_dir+directory_name):
+            os.makedirs(current_dir + '/' + directory_name)
         else:
             pass
 
@@ -425,7 +425,14 @@ class App:
             unmatch_merged['is_date_between']= unmatch_merged.apply(lambda x: x['Başlangıç Tarihi'] <= x['Tarih'] <= x['Bitiş Tarihi'], axis=1)
             unmatch_merged= unmatch_merged[unmatch_merged['is_date_between']==True]
             unmatch_merged.sort_values(by='Görev', inplace=True)
-            unmatch_merged= unmatch_merged.groupby(['KKM Protokol', 'Ekip No', 'Tarih', 'Durum']).agg({'İsim Soyisim':','.join}).reset_index()
+            
+            # Fix: Handle NaN values before joining
+            def safe_join(series):
+                # Convert to string and filter out NaN values
+                valid_values = series.dropna().astype(str)
+                return ','.join(valid_values)
+            
+            unmatch_merged= unmatch_merged.groupby(['KKM Protokol', 'Ekip No', 'Tarih', 'Durum']).agg({'İsim Soyisim': safe_join}).reset_index()
             unmatch_merged['KKM Protokol']= unmatch_merged['KKM Protokol'].astype(int)
 
             unmatch_merged['İsim Soyisim']= unmatch_merged['İsim Soyisim'].str.split(',')
@@ -437,7 +444,6 @@ class App:
             unmatch_merged.sort_values(by='isim1', ascending=True,inplace=True)
             unmatch_merged.reset_index(drop=True, inplace=True)
             
-
             return unmatch_merged
         
         df= match_call_list(df_unmatched,shift_list)
@@ -458,7 +464,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially

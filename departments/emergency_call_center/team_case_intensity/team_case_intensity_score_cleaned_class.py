@@ -1,4 +1,4 @@
-import pandas as pd
+ import pandas as pd
 import numpy as np
 
 import datetime as dt
@@ -15,8 +15,8 @@ import json
 
 import logging
 
-RAW_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\raw_datas"
-OVERALL_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\overall"
+RAW_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\all"
+OVERALL_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\overall"
 LAST_YEAR_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\last_year"
 
 POPULATION_DENSITY_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\populations\istanbul_population_density.csv"
@@ -35,13 +35,12 @@ class DataCreator:
         self.path= path
         
         self.df= pd.DataFrame()
-        self.df= pd.DataFrame()
         self.region= None
         
     def read_files(self):
         case_files= list(set([file for file in os.listdir(self.path) if file.endswith('.parquet')]))
         
-        if case_files.empty:
+        if len(case_files) == 0:
             raise ValueError("No parquet files found in the specified directory!")
         
         for file in case_files:
@@ -160,30 +159,57 @@ class DataCreator:
         columns= [col for col in df.columns] + ['Neighbourhood', 'District']
         # Load neighborhoods
         # Convert latitude and longitude columns to numeric, coercing errors to NaN
-        df[lat] = pd.to_numeric(df[lat], errors='coerce')
-        df[lon] = pd.to_numeric(df[lon], errors='coerce')
         
-        df_cleaned = df
-        # Convert Vakanın Enlemi and Vakanın Boylamı to geometry points
-        df_cleaned["geometry"] = df_cleaned.apply(lambda row: Point(row[lon], row[lat]), axis=1)
-        points_gdf = gpd.GeoDataFrame(df_cleaned, geometry="geometry", crs="EPSG:4326")
+        try:
+            df[lat] = pd.to_numeric(df[lat], errors='coerce')
+            df[lon] = pd.to_numeric(df[lon], errors='coerce')
+            
+            df_cleaned = df
+            # Convert Vakanın Enlemi and Vakanın Boylamı to geometry points
+            df_cleaned["geometry"] = df_cleaned.apply(lambda row: Point(row[lon], row[lat]), axis=1)
+            points_gdf = gpd.GeoDataFrame(df_cleaned, geometry="geometry", crs="EPSG:4326")
 
-        # Spatial join to find districts
-        points_gdf = gpd.sjoin(points_gdf, districts_gdf, how="left", predicate="within")
-        points_gdf.rename(columns={"name": "District"}, inplace=True)
+            # Spatial join to find districts
+            points_gdf = gpd.sjoin(points_gdf, districts_gdf, how="left", predicate="within")
+            points_gdf.rename(columns={"name": "District"}, inplace=True)
 
-        # Drop 'index_right' before the second spatial join
-        if 'index_right' in points_gdf.columns:
-            points_gdf = points_gdf.drop(columns=['index_right'])
+            # Drop 'index_right' before the second spatial join
+            if 'index_right' in points_gdf.columns:
+                points_gdf = points_gdf.drop(columns=['index_right'])
 
-        # Spatial join to find neighborhoods
-        points_gdf = gpd.sjoin(points_gdf, self.neighbourhoods_gdf, how="left", predicate="within")
-        points_gdf.rename(columns={"name": "Neighbourhood"}, inplace=True)
-        points_gdf['District']= points_gdf['District'].astype(str).str.strip()
-        
-        # Select relevant columns and return
-        logging.info(f"\n\n==================================================\nShape of points_gdf: {points_gdf.shape}\n\n==================================================")
-        return points_gdf[columns]
+            # Spatial join to find neighborhoods
+            points_gdf = gpd.sjoin(points_gdf, self.neighbourhoods_gdf, how="left", predicate="within")
+            points_gdf.rename(columns={"name": "Neighbourhood"}, inplace=True)
+            points_gdf['District']= points_gdf['District'].astype(str).str.strip()
+            
+            # Select relevant columns and return
+            logging.info(f"\n\n==================================================\nShape of points_gdf: {points_gdf.shape}\n\n==================================================")
+            return points_gdf[columns]
+        except KeyError as e:
+            logging.warning(f"Error:{e} No compatible lat, lot columns found in the DataFrame, setting İlçe as new District column")
+            try:
+                ilce_column= [col for col in df.columns if 'ilçe' in col.replace('İ','i').lower()]
+                
+                if len(ilce_column) == 0:
+                    logging.warning('No suitable district found, this dataframe will be excluded from scoring!')
+                    return pd.DataFrame()
+                
+                elif len(ilce_column) == 1:
+                    logging.info(f'One ilçe column named as: {ilce_column[0]} found, using it as district column')
+                    ilce_column= ilce_column[0]
+                    
+                else:
+                    for index, col in enumerate(ilce_column):
+                        print(index, ': ', col)
+                        
+                    selected_index= int(input("Possible İlçe columns found. Write the column number: "))
+                    ilce_column= ilce_column[selected_index]
+                    
+                df['District']= df[ilce_column].str.strip().str.replace('I','ı').str.lower().str.capitalize()
+                
+                return df
+            except KeyError as e:
+                return df
     
     def get_districts(self):
         """Returns a list of European side districts."""
@@ -202,6 +228,7 @@ class DataCreator:
             'Çatalca',
             'Esenler',
             'Esenyurt',
+            'Eyüp',
             'Eyüpsultan',
             'Fatih',
             'Gaziosmanpaşa',
@@ -911,48 +938,63 @@ class DataScorer:
         try:
             logging.info("Calculating cagri nedeni score...")
             self.df['cagri_nedeni_score'] = self.df['Çağrı Nedeni'].apply(self.cagri_score)
+            logging.info(f"The values of 'Çağrı Nedeni' column are: {self.df['Çağrı Nedeni'].value_counts()} calculated")
             
             logging.info("calculating triage score...")
             self.df['triaj_score'] = self.df['Triaj'].apply(self.triage_score)
+            logging.info(f"The values of 'Triaj' column are: {self.df['Triaj'].value_counts()} calculated")
             
             logging.info("Calculating Yas score...")
             self.df['yas_score'] = self.df['Yaş'].apply(self.age_score)
+            logging.info(f"The values of 'Yaş' column are: {self.df['Yaş'].notna().sum()} calculated")
             
             logging.info(f"Calculating cinsiyet score...")
             self.df['cinsiyet_score'] = self.df['Cinsiyet'].apply(self.cinsiyet_score)
+            logging.info(f"The values of 'Cinsiyet' column are: {self.df['Cinsiyet'].value_counts()} calculated")
             
             logging.info("Calculating yeni dogan score...")
             self.df['yeni_dogan_score'] = self.df['Yeni Doğan'].apply(self.yenidogan_score)
+            logging.info(f"The values of 'Yeni Doğan' column are: {self.df['Yeni Doğan'].value_counts()} calculated")
             
             logging.info("Calculating adli vaka score...")
             self.df['adli_vaka_score'] = self.df['Adli Vaka'].apply(self.adli_vaka_score)
+            logging.info(f"The values of 'Adli Vaka' column are: {self.df['Adli Vaka'].value_counts()} calculated")
             
             logging.info("Calculating sonuc score...")
             self.df['sonuc_score'] = self.df['Sonuç'].apply(self.sonuc_score)
+            logging.info(f"The values of 'Sonuç' column are: {self.df['Sonuç'].value_counts()} calculated")
             
             logging.info("Calculating bilinc score...")
             self.df['bilinc_score'] = self.df['Bilinç'].apply(self.bilinç_score)
+            logging.info(f"The values of 'Bilinç' column are: {self.df['Bilinç'].value_counts()} calculated")
             
             logging.info("Calculating nabiz score...")
             self.df['nabiz_score'] = self.df['Nabız'].apply(self.pulse_type_score)
+            logging.info(f"The values of 'Nabız' column are: {(self.df['Nabız'].notna() & self.df['Nabız']!= '-').sum()} calculated")
             
             logging.info("Calculating tansiyon score...")
             self.df['tansiyon_score'] = self.df['Tansiyon'].apply(self.tansiyon_score)
+            logging.info(f"The values of 'Tansiyon' column are: {(self.df['Tansiyon'].notna() & self.df['Tansiyon']!= '-').sum()} values calculated")
             
             logging.info("Calculating glukoz score...")
             self.df['glukoz_score'] = self.df['Glukoz'].apply(self.glukoz_score)
+            logging.info(f"The values of 'Glukoz' column are: {self.df['Glukoz'].notna().sum()} values calculated")
             
             logging.info("Calculating ates score...")
             self.df['ates_score'] = self.df['Ateş'].apply(self.ates_score)
+            logging.info(f"The values of 'Ateş' column are: {self.df['Ateş'].notna().sum()} values calculated")
             
             logging.info("Calculating spo2 score...")
             self.df['spo2_score'] = self.df['SPO2'].apply(self.spo2_score)
+            logging.info(f"The values of 'SPO2' column are: {(self.df['SPO2'].notna() & self.df['SPO2']!= '-').sum()} values calculated")
             
             logging.info("Calculating solunum degeri score...")
             self.df['solunum_score'] = self.df['Solunum Değeri'].apply(self.solunum_score)
+            logging.info(f"The values of 'Solunum Değeri' column are: {self.df['Solunum Değeri'].notna().sum()} values calculated")
             
             logging.info("Calculating nabiz score...")
             self.df['nabiz_deger_score'] = self.df['Nabız Değeri'].apply(self.nabiz_deg_score)
+            logging.info(f"The values of 'Nabız Değeri' column are: {(self.df['Nabız Değeri'].notna() & self.df['Nabız Değeri']!= '-').sum()} values calculated")
             
         
         except KeyError as e:
@@ -989,7 +1031,7 @@ def main():
     scorer.datascorer()
 
 if __name__ == '__main__':
-    # Load data
+    # Load population density and icd_scorings data
     population_density = pd.read_csv(POPULATION_DENSITY_PATH)
     icd_diagnoses = pd.read_csv(ICD_DIAGNOSES_PATH)
     
