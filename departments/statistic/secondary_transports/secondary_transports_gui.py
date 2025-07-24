@@ -781,7 +781,6 @@ class AmbulanceApp:
 
                 
                     def color_rows_by_talep_tarihi(df):
-                        import pandas as pd
 
                         def highlight_rows(row):
                             if pd.notna(row['Talep Tarihi']):
@@ -791,10 +790,19 @@ class AmbulanceApp:
                         styled_df = df.style.apply(highlight_rows, axis=1)
                         return styled_df
 
-
+                    df_home_transports= df_home_transports.reset_index(drop=True)
+                    the_frame= the_frame.reset_index(drop=True)
                     # Example usage (assuming 'df_placed' is your DataFrame):
-                    styled_df_home_transports = color_rows_by_talep_tarihi(df_home_transports)
-                    styled_the_frame= color_rows_by_talep_tarihi(the_frame)
+                    try:
+                        styled_df_home_transports = color_rows_by_talep_tarihi(df_home_transports)
+                    except ValueError as e:
+                        messagebox.showerror("Hata", f"Eve Nakil Mükerrer Dosyasında Renklendirme Yapılamadı: {e}")
+                        return df_home_transports
+                    try:
+                        styled_the_frame= color_rows_by_talep_tarihi(the_frame)
+                    except ValueError as e:
+                        messagebox.showerror("Hata", f"Renklendirme Yapılamadı: {e}")
+                        return the_frame
 
                     with pd.ExcelWriter(self.save_path + '/'+ 'Nakil Defteri Mükerrer Çalışması.xlsx', engine='openpyxl') as writer:
                         styled_the_frame.to_excel(writer, sheet_name='mükerrer', index=False)
@@ -831,7 +839,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially

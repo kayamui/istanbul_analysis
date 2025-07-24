@@ -216,7 +216,7 @@ class App:
 
         messagebox.showinfo('Dosyaları Bulundur', 'İhbar İşlemleri, Personel Nöbet Listesi,eu_team_code')
         
-        current_dir ='C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/' #os.path.abspath(os.getcwd())  #os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
+        current_dir =os.path.abspath(os.getcwd()) #os.path.abspath(os.getcwd())  #os.path.abspath(os.getcwd())  #'C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/'
 
         shift_list_file= [x for x in os.listdir(current_dir) if 'Personel-Nöbet-Listesi' in x]
         
@@ -464,7 +464,7 @@ if __name__ == "__main__":
     myappid = 'mycompany.myproduct.subproduct.version'
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
-    icon_path = resource_path("C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
+    icon_path = resource_path("app_icon.ico") #C:/Users/mkaya/Onedrive/Belgeler/GitHub/istanbul_analysis/case_tracking/call_list_creator/
     root.iconbitmap(icon_path)
 
     root.withdraw()  # Hide the main window initially
