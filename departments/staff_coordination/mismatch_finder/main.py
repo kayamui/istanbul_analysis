@@ -6,18 +6,18 @@ from docx import Document
 from difflib import SequenceMatcher
 
 import os
+current_dir= os.getcwd() #"C:/Users/mkaya/Downloads/mismatch_finder"
+os.chdir(current_dir)
 
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 from tabulate import tabulate
 
 import warnings
 warnings.filterwarnings("ignore")
 
-current_dir= os.path.dirname(os.path.abspath(__file__)) #"C:/Users/mkaya/Downloads/mismatch_finder"
-os.chdir(current_dir)
-logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
+import time
 
 results_folder = os.path.join(current_dir, "Sonuclar")
 os.makedirs(results_folder, exist_ok=True)
@@ -121,7 +121,7 @@ class DataCreator:
 
     def clean_misssing_shift_docs(self,df):
         try:
-            df['İSTASYON']= df['İSTASYON'].apply(lambda x: x.split('-')[0] +  str(int(x.split('-')[1])) if x.split('-')[1].isnumeric() and len(x.split('-'))>1 else x)
+            df['İSTASYON']= df['İSTASYON'].apply(lambda x: x.split('-')[0] +  str(int(x.split('-')[1])) if len(x.split('-'))>1 and x.split('-')[1].isnumeric() else x)
             df['İSTASYON']= df['İSTASYON'].apply(lambda x: "FTH05" if x.strip()=='FTH5' else x)
             df['İSİM']= df['İSİM'].astype(str).str.strip()
             df['SAAT']= df['SAAT'].apply(lambda x: x[0:-1] if not x[-1].isnumeric() else x)
@@ -174,8 +174,8 @@ class MismatchFinder():
         return pd.to_datetime(date, format='mixed')
 
     def find_hour(self):
-        self.left_shift_df['hour']= self.left_shift_df['SAAT'].apply(lambda x: int(x.split(':')[0]))
-        self.left_shift_df['minute']= self.left_shift_df['SAAT'].apply(lambda x: int(x.split(':')[1]))
+        self.left_shift_df['hour']= self.left_shift_df['SAAT'].apply(lambda x: int(x.split(':')[0]) if x.split(':')[0].isnumeric() else int(x.split('.')[0]) if x.split('.')[0].isnumeric() else int(x[0:2]) if x[0:2].isnumeric() else int(x[0]) if x[0].isnumeric() else ValueError("Invalid hour format"))
+        self.left_shift_df['minute']= self.left_shift_df['SAAT'].apply(lambda x: int(x.split(':')[1]) if x.split(':')[1].isnumeric() else int(x.split('.')[1]) if x.split('.')[1].isnumeric() else int(x[3:5]) if len(x) > 3 and x[3:5].isnumeric() else int(x[2:4]) if len(x) > 2 and x[2:4].isnumeric() else int(x[-1]) if len(x) > 1 and x[-1].isnumeric() else ValueError("Invalid minute format"))
 
         return self.left_shift_df
 
@@ -230,6 +230,9 @@ def main():
 
     print('*' * len("Excel dosyaları başarıyla kaydedildi."))
     print("Excel dosyaları başarıyla kaydedildi.")
+    
+    while True:
+        time.sleep(1)
 
 if __name__ == "__main__":
     try:
@@ -251,4 +254,5 @@ if __name__ == "__main__":
         print(str(e))
         print("Lütfen sistem yöneticinizle iletişime geçin.")
         print("="*60)
-        os.system("pause")
+        while True:
+            time.sleep(1)
