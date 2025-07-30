@@ -18,11 +18,12 @@ DEFAULT_IMPORTANCE = 1
 
 class DataCreator:
     
-    def __init__(self, shift_list, scoring, df_signs):
+    def __init__(self, shift_list, scoring, df_signs, driver_medic):
         
         self.shift_list = shift_list
         self.scoring = scoring
         self.df_signs= df_signs
+        self.driver_medic= driver_medic
         date= dt.datetime.now()
         self.date= date
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -73,7 +74,7 @@ class DataCreator:
         # Identify station rows: col1 has value, cols 2–4 are empty
         station_mask = self.shift_list[1].notna() & self.shift_list[[2, 3, 4]].isna().all(axis=1)
         self.shift_list["RawStation"] = self.shift_list[1].where(station_mask)
-
+        
         # Forward fill station names
         logging.info(f"station columns are {self.shift_list.columns}")
         
@@ -94,9 +95,19 @@ class DataCreator:
         self.shift_list= self.shift_list[self.shift_list['İstasyon'].notna()]
         self.shift_list= self.shift_list[pd.to_datetime(self.shift_list['Başlangıç Tarihi'], format='mixed').dt.hour < 11]
         
-        self.shift_list['roles']= self.assign_roles()
+        self.shift_list['Kimlik No']= self.shift_list['Kimlik No'].astype('int64', errors= 'ignore')
+        self.shift_list= pd.merge(self.shift_list, self.driver_medic, left_on='Kimlik No',right_on='TC KİMLİK NO', how= 'left')
+        
+        self.shift_list['roles']= self.shift_list.apply(self.assign_roles, axis=1)
+        
 
         return self.shift_list
+    
+    def clean_driver_medic(self):
+        self.driver_medic['AD SOYAD']= self.driver_medic['AD SOYAD'].astype(str).str.strip()
+        self.driver_medic['TC KİMLİK NO']= self.driver_medic['TC KİMLİK NO'].astype('int64')
+
+        return self.driver_medic
     
     def clean_signs(self):
         self.df_signs= self.df_signs[self.df_signs[2].notna()]
@@ -200,24 +211,22 @@ class DataCreator:
         }
         return regions.get(key, pd.NA)
     
-    def assign_roles(self):
+    def assign_roles(self,row):
         """
         Assigns roles based on the 'Görev' column in the shift list.
         Returns a DataFrame with roles assigned.
         """
+
+        if row["Görev"] == "Sürücü":
+            logging.info(f"Personel Adı: {row['İsim Soyisim']}, aktif görevde olduğu istasyon: {row['İstasyon']}, Sürücü rolü")
+            return ["driver"]
         
-        assignment_mask = np.select(
-            [
-                self.shift_list["Görev"] == "Sürücü",
-                (self.shift_list["Görev"]=="Ekip Sorumlusu") | (self.shift_list['Görev']=="Yardımcı Sağlık Personeli")
-            ],
-            [
-                "driver",
-                "medic"
-            ],
-            default=pd.NA
-        )
-        return assignment_mask
+        elif pd.notna(row["ASTE"]) and (row['Görev']=="Ekip Sorumlusu" or row['Görev']=="Yardımcı Sağlık Personeli"):
+            logging.info(f"Personel Adı: {row['İsim Soyisim']}, aktif görevde olduğu istasyon: {row['İstasyon']}. Personelin görevi: {row['Görev']}, aste alma zamanı: {row['ASTE']}")
+            return ["medic", "driver"]
+        else:
+            logging.info(f"Personel Adı: {row['İsim Soyisim']}, aktif görevde olduğu istasyon: {row['İstasyon']}. Sağlıkçının görevi {row['Görev']}")
+            return ["medic"]
     
     def get_json_data(self):
         """
@@ -279,6 +288,7 @@ class DataCreator:
         
         data= self.get_json_data()
         station_names= [name for name in self.shift_list['İstasyon'].unique().tolist() if pd.notna(name) and name != 'BAG5' and name != 'BKR6' and name != 'ESY4' and name != 'KÇK6' and name != 'SLV2' and name != 'ZTB3']
+        strategic_stations=[]
         
         for station_name in station_names:
             df_assignments = self.shift_list[self.shift_list['İstasyon'] == station_name].copy()
@@ -302,7 +312,10 @@ class DataCreator:
             new_station['assignedPersonnel'] = []
             new_station['maxRotationCount'] = 5
             
-            logging.info(f"Processing station: {station_name}, Region: {new_station['region']}, Importance: {new_station['importance']}")
+            new_station['similar_stations'] = similarity_results[station_name] if station_name in similarity_results else []
+            
+            
+            logging.info(f"Processing station: {station_name}, Region: {new_station['region']}, Importance: {new_station['importance']}, Similar Stations: {new_station['similar_stations']}")
             
             added_worker_ids= []
             
@@ -317,7 +330,7 @@ class DataCreator:
                     added_worker_ids.append(df_assignments.iloc[i]['Kimlik No'])
                     new_personnel['id'] = str(worker_id)
                     new_personnel['name'] = str(df_assignments.iloc[i]['İsim Soyisim'])
-                    new_personnel['roles'].append(str(df_assignments.iloc[i]['roles']))
+                    new_personnel['roles']= df_assignments.iloc[i]['roles']
                     new_personnel['homeStationId'] = str(df_assignments.iloc[i]['İstasyon'])
                     new_personnel['negativeStations'] = []
                     new_personnel['preferredStations'] = []
@@ -380,7 +393,6 @@ class Personnel:
         if rotation_count is not None:
             new_personnel.rotation_count = rotation_count
         return new_personnel
-
 
 @dataclass
 class Station:
@@ -466,7 +478,7 @@ class StationDistributionResult:
 
 class StationDistributor:
     def __init__(self, stations: List[Station], neighboring_regions: Dict[str, List[str]], 
-                 max_rotations_per_personnel: int = MAX_ROTATIONS_COUNT_PER_PERSONNEL):
+        max_rotations_per_personnel: int = MAX_ROTATIONS_COUNT_PER_PERSONNEL):
         self.stations = stations
         self.neighboring_regions = neighboring_regions
         self.max_rotations_per_personnel = max_rotations_per_personnel
@@ -481,8 +493,7 @@ class StationDistributor:
         )
 
     def get_rotation_count_for_station(self, station: Station) -> int:
-        return len([p for p in station.assigned_personnel 
-                   if p.assigned_from is not None and p.assigned_from != station.id])
+        return len([p for p in station.assigned_personnel if p.assigned_from is not None and p.assigned_from != station.id])
 
     def distribute_personnel(self) -> StationDistributionResult:
         # Sort stations by importance (highest first)
@@ -592,7 +603,7 @@ class StationDistributor:
                 stations_with_shortage = [s for s in self.stations if not s.is_fully_staffed and len(s.assigned_personnel) > 1]
                 stations_with_shortage.sort(key=lambda s: s.importance, reverse=True)
 
-            # If no progress for this station, remove from list
+            #If no progress for this station, remove from list
             if not station_progress:
                 stations_with_shortage.pop(0)
 
@@ -608,11 +619,11 @@ class StationDistributor:
                     excess_details['driver'] = station.driver_count - 1
                 excess_stations[station.id] = excess_details
                 self.logs.append(f'{station.id} istasyonunda fazla personel: {", ".join([f"{v} {k}" for k, v in excess_details.items()])}')
-
+        
         # Prepare results
         open_stations = [s for s in self.stations if s.is_fully_staffed]
         closed_stations = [s for s in self.stations if not s.is_fully_staffed]
-
+        
         return StationDistributionResult(
             open_stations=open_stations,
             closed_stations=closed_stations,
@@ -812,12 +823,14 @@ class StationDistributor:
 
 def main():
     
-    creator = DataCreator(shift_list, scoring, df_signs)
+    creator = DataCreator(shift_list, scoring, df_signs, driver_medic)
+    creator.clean_driver_medic()
+    logging.info("Driver/Medic file cleaning completed.")
     creator.staff_shift_file_cleaning()
     logging.info("Shift list cleaned successfully.")
     creator.clean_signs()
     logging.info("Signs cleaned successfully.")
-    creator.scoring['total_score_z']= creator.scoring_type()
+    creator.scoring['station_expendable']= creator.scoring_type()
     data = creator.create_source_data()
     logging.info("Source data created successfully.")
     
@@ -848,15 +861,20 @@ def main():
         'Kapalı İstasyonlar': pad(closed_station_names)
     })
 
-    result_excel.to_excel('result.xlsx', index=False)
+    result_excel.to_excel('C:/Users/mkaya/Downloads/result.xlsx', index=False)
     for log in result.logs:
         print(f'- {log}')
 
 if __name__ == "__main__":
     
-    shift_list = pd.read_excel(rf"C:\Users\mkaya\Downloads\Personel-Nöbet-Listesi (43).xls", header=None)
-    df_signs = pd.read_excel(r"C:\Users\mkaya\Downloads\Personel-Imza-Defteri (15).xls", header=None)
-    scoring_file_name = DataCreator(None, None, None).get_scoring_file_name()
+    shift_list = pd.read_excel(rf"C:\Users\mkaya\Downloads\Personel-Nöbet-Listesi (45).xls", header=None)
+    df_signs = pd.read_excel(r"C:\Users\mkaya\Downloads\Personel-Imza-Defteri (17).xls", header=None)
+    driver_medic= pd.read_excel(r"C:\Users\mkaya\Downloads\ASGE ALAN PERSONEL.xlsx")
+    
+    with open(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\team_similarities\similarity_results.json", 'r', encoding='utf-8') as f:
+        similarity_results = json.load(f)
+    
+    scoring_file_name = DataCreator(None, None, None, None).get_scoring_file_name()
     logging.info(f"Scoring file name: {scoring_file_name}")
     
     scoring = pd.read_excel(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\overall\{scoring_file_name}")

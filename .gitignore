@@ -190,3 +190,4 @@ departments/Electronic Data System/Gui Program/versions/ver1.4/unlock_code.py
 *.csv
 departments/emergency_call_center/team_case_intensity/personel skorlama ve dağıtım mekanizması.docx
 *.docx
+departments/emergency_call_center/team_case_intensity/backup_station_finder.ipynb
