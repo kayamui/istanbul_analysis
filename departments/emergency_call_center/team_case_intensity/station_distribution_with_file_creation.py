@@ -12,8 +12,8 @@ import datetime as dt
 import logging
 
 SOURCE_DATA_NAME = 'data.json'
-STATION_MAX_ROTATION_COUNT = 3
-MAX_ROTATIONS_COUNT_PER_PERSONNEL = 5
+STATION_MAX_ROTATION_COUNT = 100
+MAX_ROTATIONS_COUNT_PER_PERSONNEL = 100
 DEFAULT_IMPORTANCE = 1
 
 class DataCreator:
@@ -85,9 +85,9 @@ class DataCreator:
         
         self.shift_list= self.shift_list[(self.shift_list['Kimlik No'].notna()) & (self.shift_list['Kimlik No'] != 'Kimlik No')]
         self.shift_list['Kimlik No']= self.shift_list['Kimlik No'].astype(str).str.strip()
-        self.shift_list['İsim Soyisim']= self.shift_list['İsim'].astype(str).str.strip() + ' ' + self.shift_list['Soyisim'].astype(str).str.strip()
+        self.shift_list['İsim Soyisim']= (self.shift_list['İsim'].astype(str).str.strip() + ' ' + self.shift_list['Soyisim'].astype(str).str.strip()).str.strip()
         self.shift_list= self.shift_list[(self.shift_list['Başlangıç Tarihi'].notna()) & ((pd.to_datetime(self.shift_list['Bitiş Tarihi'], format= 'mixed') - pd.to_datetime(self.shift_list['Başlangıç Tarihi'], format='mixed')) > pd.Timedelta(hours=8))]
-                
+
         cleaned = self.shift_list['İstasyon'].apply(self.clean_team_codes)
         self.shift_list['İstasyon'] = cleaned.apply(lambda x: x[0] if isinstance(x, tuple) else pd.NA)
         self.shift_list['region'] = cleaned.apply(lambda x: x[1] if isinstance(x, tuple) else pd.NA)
@@ -100,7 +100,7 @@ class DataCreator:
         
         self.shift_list['roles']= self.shift_list.apply(self.assign_roles, axis=1)
         
-
+        self.shift_list= self.shift_list[self.shift_list['İsim Soyisim'].isin(self.df_signs['Adı Soyadı'].unique())]
         return self.shift_list
     
     def clean_driver_medic(self):
@@ -288,7 +288,7 @@ class DataCreator:
         
         data= self.get_json_data()
         station_names= [name for name in self.shift_list['İstasyon'].unique().tolist() if pd.notna(name) and name != 'BAG5' and name != 'BKR6' and name != 'ESY4' and name != 'KÇK6' and name != 'SLV2' and name != 'ZTB3']
-        strategic_stations=[]
+        strategic_stations=["ÇTL1", "ÇTL2","ÇTL3","ÇTL4","ÇTL5"]
         
         for station_name in station_names:
             df_assignments = self.shift_list[self.shift_list['İstasyon'] == station_name].copy()
@@ -313,8 +313,12 @@ class DataCreator:
             new_station['maxRotationCount'] = 5
             
             new_station['similar_stations'] = similarity_results[station_name] if station_name in similarity_results else []
+            new_station['strategic'] = station_name in strategic_stations
             
-            
+            if new_station['strategic']:
+                logging.info(f"Strategic station found: {station_name}, setting importance to 100")
+                new_station['importance'] = 100
+                
             logging.info(f"Processing station: {station_name}, Region: {new_station['region']}, Importance: {new_station['importance']}, Similar Stations: {new_station['similar_stations']}")
             
             added_worker_ids= []
@@ -395,13 +399,32 @@ class Personnel:
         return new_personnel
 
 @dataclass
+class SimilarityResult:
+    similar_ekip_no: str
+    similarity_score: float
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'SimilarityResult':
+        return cls(
+            similar_ekip_no= data['similar_ekip_no'],
+            similarity_score= data['similarity_score']
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'similar_ekip_no': self.similar_ekip_no,
+            'similarity_score': self.similarity_score
+        }
+
+@dataclass
 class Station:
     id: str
     region: str
     assigned_personnel: List[Personnel]
-    importance: int = DEFAULT_IMPORTANCE
+    importance: float = DEFAULT_IMPORTANCE
     max_rotation_count: int = STATION_MAX_ROTATION_COUNT
-
+    similar_stations: List[SimilarityResult] = field(default_factory=list)
+    
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Station':
         return cls(
@@ -409,7 +432,8 @@ class Station:
             region=data['region'],
             importance=data.get('importance', DEFAULT_IMPORTANCE),
             max_rotation_count=data.get('maxRotationCount', STATION_MAX_ROTATION_COUNT),
-            assigned_personnel=[Personnel.from_dict(p) for p in data['assignedPersonnel']]
+            assigned_personnel=[Personnel.from_dict(p) for p in data['assignedPersonnel']],
+            similar_stations=[SimilarityResult.from_dict(s) for s in data.get('similar_stations', [])]
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -418,7 +442,8 @@ class Station:
             'region': self.region,
             'importance': self.importance,
             'maxRotationCount': self.max_rotation_count,
-            'assignedPersonnel': [p.to_dict() for p in self.assigned_personnel]
+            'assignedPersonnel': [p.to_dict() for p in self.assigned_personnel],
+            'similar_stations': [s.to_dict() for s in self.similar_stations]
         }
 
     @property
@@ -517,9 +542,32 @@ class StationDistributor:
         personnel_moved = 0
 
         # Identify stations with shortage and excess
-        stations_with_shortage = [s for s in self.stations if not s.is_fully_staffed]
+        stations_with_shortage = [
+            s for s in self.stations 
+            if not s.is_fully_staffed
+        ]        
         stations_with_excess = [s for s in self.stations if s.has_excess_medics or s.has_excess_drivers]
-        stations_with_shortage.sort(key=lambda s: s.importance, reverse=True)
+        
+        shortage_ids = {s.id for s in stations_with_shortage}
+        boost_history= dict()
+        for st in stations_with_shortage:
+            for sim in st.similar_stations:
+                if sim.similar_ekip_no in shortage_ids:
+                    if sim.similar_ekip_no not in boost_history:
+                        boost_history[sim.similar_ekip_no]= []
+                    boost = abs(st.importance) * sim.similarity_score
+                    
+                    if boost > 0.1:
+                        boost_history[sim.similar_ekip_no].append(boost)
+                    else:
+                        continue
+                    
+                    st.importance += boost
+                    self.logs.append(
+                        f"{st.id} importance += {boost:.2f} "
+                        f"(because it’s similar to {sim.similar_ekip_no})"
+                    )
+            stations_with_shortage.sort(key=lambda s: s.importance, reverse=True)
 
         # Dynamic distribution for shortage stations
         while stations_with_shortage:
@@ -577,13 +625,11 @@ class StationDistributor:
                 personnel_moved += 1
                 remaining_rotations -= 1
                 station_progress = True
-                self.logs.append(f'{updated_person.name} ({role}) {origin_station.id} -> {shortage_station.id}')
+                #self.logs.append(f'{updated_person.name} ({role}) {origin_station.id} -> {shortage_station.id}')
 
                 # Check source station personnel count
                 if len(origin_station.assigned_personnel) == 1:
                     self.logs.append(f'{origin_station.id} istasyonunda sadece 1 personel kaldı, istasyon kapatılıyor.')
-                    if origin_station in stations_with_shortage:
-                        stations_with_shortage.remove(origin_station)
                     
                     # Distribute remaining personnel to other stations
                     remaining_person = origin_station.assigned_personnel[0]
@@ -601,6 +647,37 @@ class StationDistributor:
                 # Update lists
                 stations_with_excess = [s for s in self.stations if s.has_excess_medics or s.has_excess_drivers]
                 stations_with_shortage = [s for s in self.stations if not s.is_fully_staffed and len(s.assigned_personnel) > 1]
+                for s in stations_with_shortage:
+                    if s.id in boost_history:
+                        boosts = boost_history[s.id]
+                        previous_importance = s.importance
+                        if boosts:
+                            s.importance -= sum(boosts)
+                            self.logs.append(f"{s.id} {previous_importance:.2f} -= {sum(boosts):.2f}  => {s.importance:.2f} (boost history: {boosts})")
+                        else:
+                            self.logs.append(f"{s.id} importance remains unchanged (no boosts)")
+                
+                boost_history.clear()
+                
+                # Recalculate importance for shortage stations
+                for st in stations_with_shortage:
+                    for sim in st.similar_stations:
+                        if sim.similar_ekip_no in shortage_ids:
+                            if sim.similar_ekip_no not in boost_history:
+                                boost_history[sim.similar_ekip_no]= []
+                            boost = abs(st.importance) * sim.similarity_score
+                            
+                            if boost > 0.1:
+                                boost_history[sim.similar_ekip_no].append(boost)
+                            else:
+                                continue
+                            
+                            st.importance += boost
+                            self.logs.append(
+                                f"{st.id} importance += {boost:.2f} "
+                                f"(because it’s similar to {sim.similar_ekip_no})"
+                            )
+                # Sort again by importance
                 stations_with_shortage.sort(key=lambda s: s.importance, reverse=True)
 
             #If no progress for this station, remove from list
@@ -623,7 +700,8 @@ class StationDistributor:
         # Prepare results
         open_stations = [s for s in self.stations if s.is_fully_staffed]
         closed_stations = [s for s in self.stations if not s.is_fully_staffed]
-        
+        logging.info(f'Kapanan istasyonlar: {closed_stations}')
+
         return StationDistributionResult(
             open_stations=open_stations,
             closed_stations=closed_stations,
@@ -826,10 +904,12 @@ def main():
     creator = DataCreator(shift_list, scoring, df_signs, driver_medic)
     creator.clean_driver_medic()
     logging.info("Driver/Medic file cleaning completed.")
-    creator.staff_shift_file_cleaning()
-    logging.info("Shift list cleaned successfully.")
+    
     creator.clean_signs()
     logging.info("Signs cleaned successfully.")
+    creator.staff_shift_file_cleaning()
+    logging.info("Shift list cleaned successfully.")
+
     creator.scoring['station_expendable']= creator.scoring_type()
     data = creator.create_source_data()
     logging.info("Source data created successfully.")
@@ -849,7 +929,12 @@ def main():
     open_station_names = [s.id for s in result.open_stations]
     closed_station_names = [s.id for s in result.closed_stations]
     logs = result.logs
-
+    
+    for s in result.open_stations:
+        for personnel in s.assigned_personnel:
+            if personnel.assigned_from!= s.id:
+                logs.append(f'{personnel.name} ({", ".join(personnel.roles)}) {personnel.assigned_from} -> {s.id}')
+    logs= logs[::-1]  # Reverse logs to show latest first
     max_len = max(len(open_station_names), len(closed_station_names), len(logs))
 
     def pad(lst):
@@ -862,13 +947,14 @@ def main():
     })
 
     result_excel.to_excel('C:/Users/mkaya/Downloads/result.xlsx', index=False)
+    
     for log in result.logs:
         print(f'- {log}')
 
 if __name__ == "__main__":
     
-    shift_list = pd.read_excel(rf"C:\Users\mkaya\Downloads\Personel-Nöbet-Listesi (45).xls", header=None)
-    df_signs = pd.read_excel(r"C:\Users\mkaya\Downloads\Personel-Imza-Defteri (17).xls", header=None)
+    shift_list = pd.read_excel(rf"C:\Users\mkaya\Downloads\Personel-Nöbet-Listesi (50).xls", header=None)
+    df_signs = pd.read_excel(r"C:\Users\mkaya\Downloads\Personel-Imza-Defteri (21).xls", header=None)
     driver_medic= pd.read_excel(r"C:\Users\mkaya\Downloads\ASGE ALAN PERSONEL.xlsx")
     
     with open(rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\team_similarities\similarity_results.json", 'r', encoding='utf-8') as f:

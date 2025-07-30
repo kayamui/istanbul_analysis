@@ -1,4 +1,4 @@
- import pandas as pd
+import pandas as pd
 import numpy as np
 
 import datetime as dt
@@ -15,7 +15,7 @@ import json
 
 import logging
 
-RAW_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\all"
+RAW_DATA_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\raw_datas"
 OVERALL_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\overall"
 LAST_YEAR_SAVE_PATH= rf"C:\Users\mkaya\OneDrive\Masaüstü\istanbul112_hidden\data\case_reports\europe\parquet_files\team_case_intensities\test\last_year"
 
@@ -54,7 +54,8 @@ class DataCreator:
             logging.info(f"==================================================\nFile {file} columns converted successfully with shape {df.shape}\n==================================================")
             df= self.necessary_columns(df)
             logging.info(f"==================================================\nFile {file} necessary columns assigned successfully with shape {df.shape}\n==================================================")
-            
+            df= df[df['Sonuç'] != 'Nakil - Hastaneler Arası']
+            logging.info(f"==================================================\nFile {file} unnecessary rows removed with shape {df.shape}\n==================================================")
             logging.info(f"File {file} processed and necessary columns assigned.")
 
             self.df= pd.concat([self.df, df], ignore_index=True)
@@ -653,29 +654,30 @@ class DataScorer:
     def get_weights(self):
         
         column_weights = {
-            "total_distance": 4,
+            "total_distance": 3.5,
             "mean_daily_case_count": 1,
-            "case_response_time": 2.5,
-            "field_operation_time": 2.5,
-            "hospital_delivery_time": 2.5,
-            "cagri_nedeni_score": 2,
-            "triaj_score": 4,
-            "icd_score": 5,
+            "case_response_time": 2,
+            "field_operation_time": 2,
+            "hospital_delivery_time": -2,
+            "cagri_nedeni_score": 3,
+            "triaj_score": 5,
+            "icd_score": 1,
             "yas_score": 1.5,
-            "cinsiyet_score": 1.5,
-            "yeni_dogan_score": 1.5,
-            "adli_vaka_score": 1.5,
+            "cinsiyet_score": 1,
+            "yeni_dogan_score": 4,
+            "adli_vaka_score": 3,
             "sonuc_score": 4,
-            "bilinc_score": 1.5,
-            "nabiz_score": 3,
-            "tansiyon_score": 1.5,
-            "glukoz_score": 1.5,
-            "ates_score": 1.5,
-            "spo2_score": 3,
+            "bilinc_score": 4,
+            "nabiz_score": 3.5,
+            "tansiyon_score": 3.5,
+            "glukoz_score": 3.5,
+            "ates_score": 3.5,
+            "spo2_score": 3.5,
             "solunum_score": 1.5,
             "nabiz_deger_score": 1,
-            "teams_population_density": 1,
-            "case_count": 1
+            "teams_population_density": 4,
+            "case_count": 1,
+            "yas_score":4
             }
         
         return column_weights
@@ -683,9 +685,12 @@ class DataScorer:
     def age_score(self, age):
         try:
             age = int(age)
-            return age
+            if age<1 | age>65:
+                return 100
+            else:
+                return 75
         except:
-            return 32.7
+            return 75
         
     def cagri_score(self, val):
         high_impact = ["Terör", "Trafik Kazası", "Yaralama", "Beyaz Kod Sağlık Personeline Şiddet"]
@@ -699,10 +704,11 @@ class DataScorer:
     
     def sonuc_score(self, val):
         high_impact = [
-            "Nakil - Hastaneye", "Ex - Yerinde Bırakıldı", "Nakil - Eve",
-            "Nakil - Tıbbi Tetkik İçin", "Nakil - Hastaneler Arası", "Ex - Morga Nakil"
+            "Nakil - Hastaneye"
         ]
-        med_impact = ["Diğer", "Olay Yerinde Bekleme", "Yerinde Müdahale", "Nakil - Diğer"]
+        med_impact = ["Diğer", "Olay Yerinde Bekleme", "Yerinde Müdahale", "Nakil - Diğer","Ex - Yerinde Bırakıldı", "Nakil - Eve",
+            "Nakil - Tıbbi Tetkik İçin", "Ex - Morga Nakil"]
+        
         if val in high_impact:
             return 100
         elif val in med_impact:
@@ -830,6 +836,7 @@ class DataScorer:
         
         triage_scores = {
             'Kırmızı': 100,
+            'Siyah': 10,
             'Sarı': 75,
             'Yeşil': 50
         }
